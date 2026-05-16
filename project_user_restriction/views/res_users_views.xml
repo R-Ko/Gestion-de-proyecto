@@ -10,6 +10,7 @@
             <field name="profile_bio"/>
             <field name="avatar_url"/>
             <field name="favorite_color"/>
+            <field name="allowed_project_ids" widget="many2many_tags"/>
           </group>
         </page>
       </xpath>
