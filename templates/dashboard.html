@@ -1,0 +1,23 @@
+{% extends "app_page.html" %}
+{% block content %}
+<section class="card card-panel">
+  <div class="card-header">
+    <h2>Bienvenido al dashboard</h2>
+    <p>Revisa el estado de la aplicación y accede a las secciones principales desde aquí.</p>
+  </div>
+  <div class="dashboard-grid">
+    <div class="dashboard-card">
+      <strong>Usuarios</strong>
+      <p>Administra cuentas y permisos de usuario. Desde aquí puedes crear usuarios y asignarles proyectos.</p>
+    </div>
+    <div class="dashboard-card">
+      <strong>Proyectos</strong>
+      <p>Consulta la lista de proyectos activos, filtra por tareas asignadas y navega hacia los detalles.</p>
+    </div>
+    <div class="dashboard-card">
+      <strong>Accesos rápidos</strong>
+      <p>Usa el menú superior para volver a apps, abrir el módulo de usuarios o gestionar el módulo de proyectos.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -196,7 +196,7 @@ def login():
 def dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
-    return f"<h2>Bienvenido, {session['user']}</h2><p><a href='{url_for('logout')}'>Cerrar sesión</a></p>"
+    return render_template('dashboard.html')
 
 
 @app.route('/apps')
