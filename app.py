@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from pathlib import Path
+import time
 
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / 'users.db'
@@ -226,6 +227,10 @@ def open_app(name):
         cur = conn.cursor()
         if filter_by == 'assigned':
             cur.execute("SELECT id, name, owner_email, assigned_emails, tasks_count, tickets_count FROM projects WHERE assigned_emails LIKE ? OR owner_email = ?",('%' + user_email + '%', user_email))
+        elif filter_by == 'hitos':
+            cur.execute("SELECT DISTINCT p.id, p.name, p.owner_email, p.assigned_emails, p.tasks_count, p.tickets_count FROM projects p JOIN tasks t ON t.project_id = p.id WHERE t.milestone != ''")
+        elif filter_by == 'sprint':
+            cur.execute("SELECT DISTINCT p.id, p.name, p.owner_email, p.assigned_emails, p.tasks_count, p.tickets_count FROM projects p JOIN tasks t ON t.project_id = p.id WHERE t.sprint != ''")
         else:
             cur.execute('SELECT id, name, owner_email, assigned_emails, tasks_count, tickets_count FROM projects')
         projects = [dict(id=r[0], name=r[1], owner=r[2], assigned=r[3], tasks=r[4], tickets=r[5]) for r in cur.fetchall()]
@@ -254,10 +259,97 @@ def open_app(name):
     return render_template('app_page.html', name=name)
 
 
+@app.route('/app/project/create', methods=['GET', 'POST'])
+def create_project():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        assigned = request.form.get('assigned_emails', '').strip()
+        owner = session.get('user')
+        if not name:
+            flash('Nombre de proyecto requerido', 'danger')
+            return redirect(url_for('create_project'))
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute('INSERT INTO projects (name, owner_email, assigned_emails, tasks_count, tickets_count) VALUES (?, ?, ?, 0, 0)',
+                    (name, owner, assigned))
+        conn.commit()
+        conn.close()
+        flash('Proyecto creado', 'success')
+        return redirect(url_for('open_app', name='project'))
+    return render_template('project_create.html')
+
+
+@app.route('/project/<int:project_id>/task/create', methods=['GET', 'POST'])
+def create_task(project_id):
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute('SELECT id, name, assigned_emails FROM projects WHERE id=?', (project_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        flash('Proyecto no encontrado', 'danger')
+        return redirect(url_for('open_app', name='project'))
+    project = dict(id=row[0], name=row[1], assigned_emails=row[2] or '')
+    project_users = [email.strip() for email in project['assigned_emails'].split(',') if email.strip()]
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        stage = request.form.get('stage', 'backlog')
+        assigned_email = request.form.get('assigned_email', '')
+        ticket_number = request.form.get('ticket_number', '').strip() or f"{project_id}-{int(time.time())}"
+        if not title:
+            flash('Título de la tarea requerido', 'danger')
+            conn.close()
+            return redirect(url_for('create_task', project_id=project_id))
+        status = status_for_stage(stage)
+        cur.execute('INSERT INTO tasks (project_id, title, description, assigned_email, stage, task_type, deadline, milestone, sprint, category, status, ticket_number, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,datetime("now"))',
+                    (project_id, title, request.form.get('description', '').strip(), assigned_email, stage, request.form.get('task_type', '').strip(), request.form.get('deadline', '').strip(), request.form.get('milestone', '').strip(), request.form.get('sprint', '').strip(), request.form.get('category', '').strip(), status, ticket_number))
+        cur.execute('UPDATE projects SET tasks_count = tasks_count + 1 WHERE id=?', (project_id,))
+        conn.commit()
+        conn.close()
+        flash('Tarea creada', 'success')
+        return redirect(url_for('project_detail', project_id=project_id))
+    conn.close()
+    return render_template('task_create.html', project=project, project_users=project_users, stage_options=STAGE_OPTIONS)
+
+
+@app.route('/task/<int:task_id>/move', methods=['POST'])
+def move_task(task_id):
+    if 'user' not in session:
+        return jsonify({'error': 'No autorizado'}), 403
+    data = request.get_json(silent=True) or {}
+    stage = data.get('stage')
+    if stage not in dict(STAGE_OPTIONS):
+        return jsonify({'error': 'Estado inválido'}), 400
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute('SELECT stage FROM tasks WHERE id=?', (task_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({'error': 'Tarea no encontrada'}), 404
+    old_stage = row[0]
+    if old_stage == stage:
+        conn.close()
+        return jsonify({'ok': True})
+    new_status = status_for_stage(stage)
+    cur.execute('UPDATE tasks SET stage=?, status=? WHERE id=?', (stage, new_status, task_id))
+    note = f"Etapa: *{old_stage}* → *{stage}*"
+    cur.execute('INSERT INTO task_changes (task_id, author, note, changed_at) VALUES (?,?,?,datetime("now"))',
+                (task_id, session.get('user'), note))
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
+
+
 @app.route('/project/<int:project_id>')
 def project_detail(project_id):
     if 'user' not in session:
         return redirect(url_for('login'))
+    view_filter = request.args.get('view', 'all')
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute('SELECT id, name, owner_email, assigned_emails, tasks_count, tickets_count FROM projects WHERE id=?', (project_id,))
@@ -269,10 +361,14 @@ def project_detail(project_id):
     cur.execute('SELECT id, title, assigned_email, stage, task_type, deadline, milestone, sprint, category, status, ticket_number FROM tasks WHERE project_id=?', (project_id,))
     tasks = [dict(id=r[0], title=r[1], assigned=r[2], stage=r[3], task_type=r[4], deadline=r[5], milestone=r[6], sprint=r[7], category=r[8], status=r[9], ticket=r[10]) for r in cur.fetchall()]
     conn.close()
+    if view_filter == 'hitos':
+        tasks = [task for task in tasks if task['milestone']]
+    elif view_filter == 'sprint':
+        tasks = [task for task in tasks if task['sprint']]
     task_columns = {'pending': [], 'backlog': [], 'inprogress': [], 'qa': [], 'validation': [], 'deployed': []}
     for task in tasks:
         task_columns.get(task['stage'], task_columns['backlog']).append(task)
-    return render_template('project_detail.html', project=project, task_columns=task_columns)
+    return render_template('project_detail.html', project=project, task_columns=task_columns, view_filter=view_filter)
 
 
 @app.route('/task/<int:task_id>', methods=['GET', 'POST'])

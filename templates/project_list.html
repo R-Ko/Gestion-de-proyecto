@@ -12,6 +12,7 @@
       .page-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
       .action-pill{background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.22);border-radius:4px;padding:8px 14px;color:#fff;font-size:14px;text-decoration:none}
       .action-pill:hover{background:rgba(255,255,255,0.22)}
+      .action-pill.active{background:#f5eff4;border-color:#d0b7c5;color:#6d3b50;}
       .search-box{display:flex;align-items:center;background:#fff;border-radius:4px;padding:4px 10px;color:#6b6b6b}
       .search-box input{border:none;outline:none;width:180px;font-size:14px}
       .btn-create{background:#ffffff; color:#6d3b50; padding:8px 14px; border-radius:4px; text-decoration:none; font-weight:600; border:1px solid rgba(255,255,255,0.5);}
@@ -37,16 +38,16 @@
       <div>
         <div style="display:flex;align-items:center;gap:12px;">
           <div class="page-title">Proyecto</div>
-          <a href="#" class="btn-create">Nuevo proyecto</a>
+          <a href="{{ url_for('create_project') }}" class="btn-create">Nuevo proyecto</a>
         </div>
         <div class="page-breadcrumb">Proyectos</div>
       </div>
       <div class="page-actions">
         <a class="action-pill" href="/dashboard">Dashboard</a>
-        <a class="action-pill" href="/app/project?filter=all">Proyectos</a>
-        <a class="action-pill" href="/app/project?filter=assigned">Todas las tareas</a>
-        <a class="action-pill" href="/app/project?filter=all">Hitos</a>
-        <a class="action-pill" href="/app/project?filter=all">Sprint</a>
+        <a class="action-pill{% if filter_by == 'all' %} active{% endif %}" href="/app/project?filter=all">Proyectos</a>
+        <a class="action-pill{% if filter_by == 'assigned' %} active{% endif %}" href="/app/project?filter=assigned">Asignados</a>
+        <a class="action-pill{% if filter_by == 'hitos' %} active{% endif %}" href="/app/project?filter=hitos">Hitos</a>
+        <a class="action-pill{% if filter_by == 'sprint' %} active{% endif %}" href="/app/project?filter=sprint">Sprint</a>
         <div class="search-box">
           <span style="margin-right:8px;">🔍</span>
           <input type="search" placeholder="Buscar..." />
