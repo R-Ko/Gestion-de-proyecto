@@ -9,6 +9,7 @@
         'security/ir.model.access.csv',
         'views/project_views.xml',
         'views/wizard_change_password.xml',
+        'views/res_users_views.xml',
     ],
     'installable': True,
     'application': False,
