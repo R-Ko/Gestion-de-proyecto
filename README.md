@@ -1,23 +1,28 @@
-# Gestión de Proyecto
+# Proyecto: Login estilo Odoo (demo)
 
-Aplicación completa de gestión de proyectos y tareas con frontend en Next.js 14 + TypeScript + Tailwind CSS y backend en FastAPI + PostgreSQL + SQLAlchemy 2 + Pydantic v2.
+Pasos rápidos para ejecutar localmente:
 
-## Carpetas
+1. Crear y activar un entorno virtual (recomendado):
 
-- `frontend/`: aplicación Next.js App Router.
-- `backend/`: API FastAPI modular.
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
 
-## Instrucciones
+2. Instalar dependencias:
 
-1. Configura el backend:
-   - Copia `backend/.env.example` a `backend/.env`
-   - Ajusta `DATABASE_URL`
-2. Instala dependencias:
-   - `cd backend && python -m venv .venv && .\.venv\Scripts\activate && pip install -r requirements.txt`
-   - `cd frontend && npm install`
-3. Inicializa la base de datos:
-   - `cd backend && .\.venv\Scripts\activate && alembic upgrade head && python -m app.db.init_db`
-4. Ejecuta el backend:
-   - `cd backend && .\.venv\Scripts\activate && uvicorn app.main:app --reload`
-5. Ejecuta el frontend:
-   - `cd frontend && npm run dev`
+```bash
+pip install -r requirements.txt
+```
+
+3. Ejecutar la aplicación:
+
+```bash
+python "app.py"
+```
+
+La aplicación corre en `http://localhost:8018` y muestra un login que replica el estilo visual de Odoo.
+
+Credenciales de prueba:
+- usuario: `admin@example.com`
+- contraseña: `admin`

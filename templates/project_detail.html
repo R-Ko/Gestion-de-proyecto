@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ project.name }} · Proyecto</title>
+    <link rel="stylesheet" href="/static/css/odoo_login.css">
+    <style>
+      body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f5f2f5}
+      .page-header{background:#7a4a62;color:#fff;padding:22px 24px}
+      .page-breadcrumb{font-size:13px;color:rgba(255,255,255,0.78);margin-bottom:10px}
+      .page-title{font-size:28px;font-weight:700;margin:0}
+      .top-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px}
+      .toolbar-left{display:flex;align-items:center;gap:10px}
+      .toolbar-right{display:flex;align-items:center;gap:10px}
+      .btn-outline{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;padding:9px 14px;text-decoration:none;font-weight:700}
+      .btn-solid{background:#0f8b46;border:none;border-radius:4px;color:#fff;padding:9px 14px;text-decoration:none;font-weight:700}
+      .btn-tag{background:#0f8b46;color:#fff;padding:7px 12px;border-radius:4px;font-weight:700;border:none}
+      .project-filter{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #d7d1d8;padding:6px 10px;border-radius:999px;color:#4b4250;min-width:260px}
+      .project-filter .label{background:#f0eef0;padding:4px 8px;border-radius:6px}
+      .project-filter .close{margin-left:6px;color:#8a8490;cursor:pointer}
+      .top-search{display:flex;align-items:center;background:#fff;border-radius:6px;padding:8px 12px;color:#4f4b57;min-width:260px;max-width:420px}
+      .top-search input{border:none;outline:none;width:100%;font-size:14px}
+      .top-search span{margin-right:8px;font-size:16px}
+      .board-toolbar{display:flex;justify-content:flex-end;align-items:center;padding:18px 24px;background:#fff;border-bottom:1px solid #e9e5e9}
+      .board-tabs{display:flex;gap:10px;flex-wrap:wrap}
+      .board-tab{background:#f5f1f5;border:1px solid #d7d1d8;border-radius:4px;padding:9px 14px;color:#4d4551;text-decoration:none;font-size:14px}
+      .board-tab.active{background:#e4d7e1;border-color:#c8b7c6;color:#3e3041}
+      .board-actions{display:flex;gap:10px;align-items:center}
+      .board-actions .btn-outline{background:#fff;color:#4d4551;border:1px solid #d7d1d8}
+      .board-body-wrapper{overflow-x:auto;padding:0 22px 22px;background:#f5f2f5}
+      .board-body-wrapper::-webkit-scrollbar{height:10px}
+      .board-body-wrapper::-webkit-scrollbar-thumb{background:#c6b8c8;border-radius:999px}
+      .board-body-wrapper::-webkit-scrollbar-track{background:transparent}
+      .board-grid{display:grid;grid-template-columns:repeat(6,minmax(320px,1fr));gap:16px;padding:22px;min-width:1280px}
+      .column{background:#fff;border:1px solid #e6e1e5;border-radius:10px;padding:14px;min-height:240px}
+      .column-header{font-size:14px;font-weight:700;color:#4b4250;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+      .column-header span{font-size:12px;color:#8a8490}
+      .column-total{font-size:12px;padding:2px 8px;background:#f2edf1;color:#6a5364;border-radius:999px}
+      .kanban-card{background:#fcfbfd;border:1px solid #eeeaf1;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(94,70,94,0.08);cursor:grab;transition:transform 180ms ease,box-shadow 180ms ease,opacity 180ms}
+      .kanban-card:last-child{margin-bottom:0}
+      .kanban-card strong{display:block;font-size:14px;color:#342c34;margin-bottom:10px}
+      .kanban-card.dragging{transform:rotate(-6deg) scale(1.03);box-shadow:0 18px 40px rgba(52,34,44,0.18);opacity:0.95}
+      .column.drop-target{background:linear-gradient(180deg,#fff,#fbfafb);border-color:#e0d7df}
+      .kanban-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:#7a6f7f}
+      .kanban-tag{padding:4px 8px;border-radius:999px;background:#f7f3f6;color:#6f5f72}
+      .kanban-date{display:flex;align-items:center;gap:6px;color:#7a6f7f}
+    </style>
+  </head>
+  <body>
+    <div class="page-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="page-breadcrumb"><a href="{{ url_for('open_app', name='project') }}" style="color:inherit;text-decoration:none;">Proyectos</a> / Tareas</div>
+          <a class="btn-solid" href="#">+ CREAR</a>
+        </div>
+        <div class="top-toolbar">
+          <div class="board-tabs">
+            <a href="#" class="board-tab active">Proyectos</a>
+            <a href="#" class="board-tab">Todas las tareas</a>
+            <a href="#" class="board-tab">Hitos</a>
+            <a href="#" class="board-tab">Sprint</a>
+          </div>
+          <div class="top-search"><span>🔍</span><input placeholder="Buscar..." /></div>
+        </div>
+      </div>
+    </div>
+    <div class="board-toolbar">
+      <div class="board-actions">
+        <a class="btn-outline" href="#">Filtros</a>
+        <a class="btn-outline" href="#">Agrupar por</a>
+        <a class="btn-outline" href="#">Favoritos</a>
+      </div>
+    </div>
+    <div class="board-body-wrapper">
+      <div class="board-grid">
+        {% for stage, label in [('pending','*Pendientes/Detenidas'), ('backlog','*Backlog'), ('inprogress','*En progreso'), ('qa','*QA'), ('validation','*En Validación'), ('deployed','*Desplegadas')] %}
+          <div class="column" data-state="{{ stage }}">
+            <div class="column-header"><span>{{ label }}</span><span class="column-total">{{ task_columns[stage] | length }}</span></div>
+            {% for task in task_columns[stage] %}
+              <a href="{{ url_for('task_detail', task_id=task.id) }}" class="kanban-card" style="display:block;">
+                <strong>{{ task.title }}</strong>
+                <div class="kanban-meta"><span class="kanban-tag">{{ task.category }}</span><span class="kanban-date">{{ task.deadline }}</span></div>
+              </a>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <script>
+      (function(){
+        const cards = document.querySelectorAll('.kanban-card');
+        const columns = document.querySelectorAll('.column');
+
+        cards.forEach(card => {
+          card.setAttribute('draggable','true');
+          card.addEventListener('dragstart', (e) => {
+            card.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            try{ e.dataTransfer.setData('text/plain', card.id); }catch(err){}
+            // hide original slightly so the drag image is visible
+            setTimeout(()=>{ card.style.opacity = '0.0'; }, 0);
+          });
+          card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            card.style.opacity = '';
+            columns.forEach(c=>c.classList.remove('drop-target'));
+          });
+        });
+
+        columns.forEach(col => {
+          col.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            col.classList.add('drop-target');
+            e.dataTransfer.dropEffect = 'move';
+          });
+          col.addEventListener('dragleave', () => { col.classList.remove('drop-target'); });
+          col.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const id = e.dataTransfer.getData('text/plain');
+            const card = document.getElementById(id);
+            if(card){
+              card.style.opacity = '';
+              col.appendChild(card);
+            }
+            columns.forEach(c=>c.classList.remove('drop-target'));
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

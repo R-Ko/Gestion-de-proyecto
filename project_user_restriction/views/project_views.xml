@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_project_form_inherit_assigned_users" model="ir.ui.view">
+    <field name="name">project.project.form.assigned.users</field>
+    <field name="model">project.project</field>
+    <field name="inherit_id" ref="project.edit_project"/>
+    <field name="arch" type="xml">
+      <xpath expr="//sheet" position="inside">
+        <group>
+          <field name="assigned_user_ids" widget="many2many_tags"/>
+        </group>
+        <separator/>
+        <group>
+          <button name="%(action_wizard_change_password)d" type="action" string="Cambiar contraseña" class="btn-primary"/>
+        </group>
+      </xpath>
+    </field>
+  </record>
+</odoo>

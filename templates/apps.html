@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Apps · Odoo style</title>
+    <link rel="stylesheet" href="/static/css/odoo_login.css">
+    <style>
+      .apps-grid{display:grid;grid-template-columns:repeat(6,120px);gap:30px;justify-content:center;padding:60px}
+      .app-tile{width:120px;height:120px;background:#f0e7ea;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 0 rgba(0,0,0,0.06);text-decoration:none;color:#333}
+      .app-icon{width:64px;height:64px;border-radius:6px;background:#6d3b50;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;margin-bottom:8px}
+      .app-label{font-size:14px;text-align:center}
+      .topbar{height:60px;background:linear-gradient(90deg,#7a4a62,#6a3b50);color:#fff;display:flex;align-items:center;padding:0 20px}
+      .topbar .user{margin-left:auto}
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand">Mi Odoo (demo)</div>
+      <div class="user">{{ user }}</div>
+    </div>
+    <div class="apps-grid">
+      {% for label, key in modules %}
+      <a class="app-tile" href="/app/{{ key }}">
+        <div class="app-icon">{{ label[0] }}</div>
+        <div class="app-label">{{ label }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </body>
+</html>

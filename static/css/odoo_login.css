@@ -1,0 +1,23 @@
+:root{
+  --bg:#f5f5f7;
+  --box:#ffffff;
+  --accent:#6d3b50; /* odoo-like plum */
+  --muted:#9b9b9b;
+}
+*{box-sizing:border-box}
+body{font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); margin:0}
+.login-page{display:flex;align-items:center;justify-content:center;height:100vh}
+.login-box{width:340px;background:var(--box);padding:28px 36px;border-radius:4px;box-shadow:0 2px 0 rgba(0,0,0,0.04);text-align:left}
+.logo-wrap{display:flex;justify-content:center;margin-bottom:12px}
+.logo-wrap img{width:120px;opacity:0.9}
+.login-form label{display:block;color:var(--muted);font-size:14px;margin-top:12px;margin-bottom:6px}
+.login-form input{width:100%;padding:10px 12px;border:1px solid #e1dfe4;border-radius:4px;background:#fff}
+.login-form input:focus{outline:none;box-shadow:0 0 0 3px rgba(173,152,164,0.2);border-color:#bda3ad}
+.btn-login{width:100%;margin-top:16px;background:var(--accent);color:#fff;border:none;padding:12px;border-radius:4px;cursor:pointer}
+.links{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:12px}
+.links a{color:var(--muted);text-decoration:none}
+.superuser{margin-top:10px;text-align:center}
+.superuser a{color:var(--muted);font-size:13px;text-decoration:none}
+.footer-links{margin-top:18px;text-align:center;font-size:12px;color:var(--muted)}
+
+@media (max-width:420px){.login-box{width:92%;padding:20px}}

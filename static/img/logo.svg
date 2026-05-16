@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60" viewBox="0 0 200 80">
+  <rect width="200" height="80" rx="8" fill="#f7f6f8"/>
+  <g transform="translate(20,10)">
+    <circle cx="30" cy="20" r="18" fill="#e9dfe3" stroke="#d1c0c8"/>
+    <text x="70" y="28" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#6d3b50">Your logo</text>
+  </g>
+</svg>
