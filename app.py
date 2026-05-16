@@ -196,7 +196,7 @@ def login():
 def dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
-    return render_template('dashboard.html')
+    return redirect(url_for('apps'))
 
 
 @app.route('/apps')
