@@ -1,0 +1,21 @@
+{% extends "app_page.html" %}
+{% block content %}
+<h1>Users</h1>
+<p>Página de módulo de ejemplo. Aquí se enlazaría con la funcionalidad real.</p>
+<p><a href="{{ url_for('apps') }}">Volver a apps</a> — <a href="{{ url_for('logout') }}">Cerrar sesión</a></p>
+
+<h2>Crear usuario</h2>
+<form method="post" action="{{ url_for('create_user_route') }}">
+  <label>Email: <input name="email" type="email" required></label>
+  <label>Contraseña: <input name="password" type="password" required></label>
+  <button type="submit">Crear</button>
+</form>
+
+<h2>Usuarios existentes</h2>
+<ul>
+  {% for u in users %}
+    <li>{{ u.email }} — <a href="{{ url_for('edit_user_projects', user_id=u.id) }}">Configurar proyectos</a></li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

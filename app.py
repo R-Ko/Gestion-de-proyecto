@@ -109,6 +109,19 @@ def init_db():
     conn.commit()
     conn.close()
 
+    # table to map allowed projects per user
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS user_allowed_projects (
+        user_id INTEGER NOT NULL,
+        project_id INTEGER NOT NULL,
+        PRIMARY KEY (user_id, project_id)
+    )
+    ''')
+    conn.commit()
+    conn.close()
+
 app = Flask(__name__)
 app.secret_key = 'dev-secret-change-me'
 
@@ -218,6 +231,26 @@ def open_app(name):
         projects = [dict(id=r[0], name=r[1], owner=r[2], assigned=r[3], tasks=r[4], tickets=r[5]) for r in cur.fetchall()]
         conn.close()
         return render_template('project_list.html', projects=projects, filter_by=filter_by)
+    # Users module: admin-only creation and project assignment
+    if name == 'users':
+        user_email = session.get('user')
+        if user_email != 'admin@example.com':
+            # non-admins see placeholder
+            return render_template('app_page.html', name='users')
+        # admin: list users and their allowed projects
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute('SELECT id, email FROM users')
+        users = [dict(id=r[0], email=r[1]) for r in cur.fetchall()]
+        cur.execute('SELECT id, name FROM projects')
+        projects = [dict(id=r[0], name=r[1]) for r in cur.fetchall()]
+        # fetch allowed projects map
+        allowed = {}
+        for u in users:
+            cur.execute('SELECT project_id FROM user_allowed_projects WHERE user_id=?', (u['id'],))
+            allowed[u['id']] = [r[0] for r in cur.fetchall()]
+        conn.close()
+        return render_template('users.html', users=users, projects=projects, allowed=allowed)
     return render_template('app_page.html', name=name)
 
 
@@ -331,6 +364,62 @@ def task_detail(task_id):
                 return redirect(url_for('task_detail', task_id=task_id))
     conn.close()
     return render_template('task_detail.html', task=task, users=users, changes=changes, stage_options=STAGE_OPTIONS, status_options=STATUS_OPTIONS)
+
+
+@app.route('/app/users/create', methods=['POST'])
+def create_user_route():
+    if 'user' not in session or session.get('user') != 'admin@example.com':
+        return redirect(url_for('login'))
+    email = request.form.get('email')
+    password = request.form.get('password')
+    if not email or not password:
+        flash('Email y contraseña requeridos', 'danger')
+        return redirect(url_for('open_app', name='users'))
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    try:
+        cur.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, generate_password_hash(password)))
+        conn.commit()
+        flash('Usuario creado', 'success')
+    except Exception as e:
+        flash(f'Error al crear usuario: {e}', 'danger')
+    conn.close()
+    return redirect(url_for('open_app', name='users'))
+
+
+@app.route('/app/users/<int:user_id>/projects', methods=['GET', 'POST'])
+def edit_user_projects(user_id):
+    if 'user' not in session or session.get('user') != 'admin@example.com':
+        return redirect(url_for('login'))
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute('SELECT id, email FROM users WHERE id=?', (user_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        flash('Usuario no encontrado', 'danger')
+        return redirect(url_for('open_app', name='users'))
+    user = dict(id=row[0], email=row[1])
+    cur.execute('SELECT id, name FROM projects')
+    projects = [dict(id=r[0], name=r[1]) for r in cur.fetchall()]
+    if request.method == 'POST':
+        selected = request.form.getlist('projects')
+        # replace mapping
+        cur.execute('DELETE FROM user_allowed_projects WHERE user_id=?', (user_id,))
+        for pid in selected:
+            try:
+                cur.execute('INSERT INTO user_allowed_projects (user_id, project_id) VALUES (?,?)', (user_id, int(pid)))
+            except Exception:
+                pass
+        conn.commit()
+        conn.close()
+        flash('Permisos de proyecto actualizados', 'success')
+        return redirect(url_for('open_app', name='users'))
+    # GET: show form
+    cur.execute('SELECT project_id FROM user_allowed_projects WHERE user_id=?', (user_id,))
+    allowed = [r[0] for r in cur.fetchall()]
+    conn.close()
+    return render_template('user_edit.html', user=user, projects=projects, allowed=allowed)
 
 
 @app.route('/logout')
