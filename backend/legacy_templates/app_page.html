@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ name }} · App</title>
+    <link rel="stylesheet" href="/static/css/odoo_login.css">
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand">Mi Odoo (demo)</div>
+      {% if session.user %}
+      <div class="user">{{ session.user }}</div>
+      {% endif %}
+    </div>
+    <main class="page-content">
+      {% block content %}
+      <section class="page-hero">
+        <div>
+          <h1>{{ name|capitalize }}</h1>
+          <p class="page-lead">Accede aquí a las funciones de gestión y administración del módulo.</p>
+        </div>
+        <div class="page-actions">
+          <a class="btn btn-secondary" href="/dashboard">Dashboard</a>
+          <a class="btn btn-secondary" href="/apps">Volver a apps</a>
+          <a class="btn btn-link" href="/logout">Cerrar sesión</a>
+        </div>
+      </section>
+      {% endblock %}
+    </main>
+  </body>
+</html>

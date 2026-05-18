@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Proyectos - Odoo Style</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- LOGIN PAGE -->
+        <div id="login-page" class="page">
+            <div class="login-box">
+                <div class="logo-wrap">
+                    <div class="logo">📊</div>
+                </div>
+                <h1>Gestión de Proyectos</h1>
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label>Correo electrónico</label>
+                        <input type="email" id="login-email" placeholder="usuario@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="login-password" placeholder="Contraseña" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Iniciar sesión</button>
+                </form>
+                <div id="login-error" class="error-message"></div>
+                <div class="links">
+                    <a href="#" onclick="showPage('reset-page')">¿No tiene una cuenta?</a>
+                    <a href="#" onclick="showPage('reset-page')">Restablecer contraseña</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROJECTS PAGE -->
+        <div id="projects-page" class="page hidden">
+            <div class="topbar">
+                <div class="brand">📊 Gestión de Proyectos</div>
+                <div class="user-menu">
+                    <span id="user-email"></span>
+                    <button onclick="handleLogout()" class="btn btn-secondary">Cerrar sesión</button>
+                </div>
+            </div>
+
+            <main class="page-content">
+                <div class="page-header">
+                    <div>
+                        <h2>Proyectos</h2>
+                        <p class="breadcrumb">Mis proyectos y asignaciones</p>
+                    </div>
+                    <button onclick="showPage('create-project-page')" class="btn btn-primary">
+                        + Nuevo proyecto
+                    </button>
+                </div>
+
+                <div class="filters">
+                    <button class="filter-btn active" onclick="filterProjects('all')">Todos</button>
+                    <button class="filter-btn" onclick="filterProjects('owner')">Mis proyectos</button>
+                    <button class="filter-btn" onclick="filterProjects('assigned')">Asignados</button>
+                    <input type="search" id="search-box" placeholder="Buscar..." onkeyup="searchProjects()">
+                </div>
+
+                <div id="projects-grid" class="projects-grid">
+                    <div class="loading">Cargando proyectos...</div>
+                </div>
+            </main>
+        </div>
+
+        <!-- PROJECT DETAIL PAGE -->
+        <div id="project-detail-page" class="page hidden">
+            <div class="topbar">
+                <div class="brand">📊 Gestión de Proyectos</div>
+                <div class="user-menu">
+                    <span id="user-email-detail"></span>
+                    <button onclick="handleLogout()" class="btn btn-secondary">Cerrar sesión</button>
+                </div>
+            </div>
+
+            <main class="page-content">
+                <div class="breadcrumb-nav">
+                    <a href="#" onclick="showPage('projects-page'); loadProjects()">← Proyectos</a>
+                </div>
+
+                <div class="project-header">
+                    <div>
+                        <h2 id="project-name"></h2>
+                        <p id="project-owner"></p>
+                    </div>
+                    <button onclick="showPage('create-task-page')" class="btn btn-primary">+ Nueva tarea</button>
+                </div>
+
+                <div class="tasks-section">
+                    <h3>Tareas</h3>
+                    <div class="filters">
+                        <button class="filter-btn active" onclick="filterTasks('all')">Todas</button>
+                        <button class="filter-btn" onclick="filterTasks('backlog')">Backlog</button>
+                        <button class="filter-btn" onclick="filterTasks('inprogress')">En progreso</button>
+                        <button class="filter-btn" onclick="filterTasks('qa')">QA</button>
+                        <button class="filter-btn" onclick="filterTasks('deployed')">Desplegada</button>
+                    </div>
+
+                    <div id="tasks-container" class="tasks-list">
+                        <div class="loading">Cargando tareas...</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- CREATE PROJECT PAGE -->
+        <div id="create-project-page" class="page hidden">
+            <div class="topbar">
+                <div class="brand">📊 Gestión de Proyectos</div>
+                <div class="user-menu">
+                    <button onclick="showPage('projects-page'); loadProjects()" class="btn btn-secondary">Cancelar</button>
+                </div>
+            </div>
+
+            <main class="page-content">
+                <div class="form-container">
+                    <h2>Crear Nuevo Proyecto</h2>
+                    <form onsubmit="handleCreateProject(event)">
+                        <div class="form-group">
+                            <label>Nombre del Proyecto</label>
+                            <input type="text" id="project-name-input" placeholder="Ej: Mi Proyecto ERP" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <textarea id="project-description-input" placeholder="Descripción del proyecto"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Crear Proyecto</button>
+                            <button type="button" onclick="showPage('projects-page'); loadProjects()" class="btn btn-secondary">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+
+        <!-- CREATE TASK PAGE -->
+        <div id="create-task-page" class="page hidden">
+            <div class="topbar">
+                <div class="brand">📊 Gestión de Proyectos</div>
+                <div class="user-menu">
+                    <button onclick="showPage('project-detail-page')" class="btn btn-secondary">Cancelar</button>
+                </div>
+            </div>
+
+            <main class="page-content">
+                <div class="form-container">
+                    <h2>Crear Nueva Tarea</h2>
+                    <form onsubmit="handleCreateTask(event)">
+                        <div class="form-group">
+                            <label>Título</label>
+                            <input type="text" id="task-title-input" placeholder="Título de la tarea" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <textarea id="task-description-input" placeholder="Descripción detallada"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Asignado a</label>
+                            <input type="email" id="task-assigned-input" placeholder="usuario@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Tarea</label>
+                            <select id="task-type-input">
+                                <option value="Codificación">Codificación</option>
+                                <option value="Análisis">Análisis</option>
+                                <option value="Documentación">Documentación</option>
+                                <option value="Despliegue">Despliegue</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Deadline</label>
+                            <input type="date" id="task-deadline-input">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Crear Tarea</button>
+                            <button type="button" onclick="showPage('project-detail-page')" class="btn btn-secondary">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+
+        <!-- RESET PAGE -->
+        <div id="reset-page" class="page hidden">
+            <div class="login-box">
+                <h2>Restablecer Contraseña</h2>
+                <p class="info-text">Contacta al administrador para restablecer tu contraseña o crear una nueva cuenta.</p>
+                <button onclick="showPage('login-page')" class="btn btn-secondary">Volver al login</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

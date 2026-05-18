@@ -1,54 +1,94 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 import sqlite3
-from pathlib import Path
 import time
+from pathlib import Path
+
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 BASE_DIR = Path(__file__).parent
+DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
+USE_POSTGRES = bool(DATABASE_URL)
 DB_PATH = BASE_DIR / 'users.db'
 
+
+def now_timestamp():
+    return time.strftime('%Y-%m-%d %H:%M:%S')
+
+
+def connect_db():
+    if USE_POSTGRES:
+        if psycopg2 is None:
+            raise RuntimeError('psycopg2-binary is required for PostgreSQL support')
+        return psycopg2.connect(DATABASE_URL)
+    return sqlite3.connect(DB_PATH)
+
+
+def db_execute(cur, query, params=None):
+    if params is None:
+        params = ()
+    if USE_POSTGRES:
+        query = query.replace('?', '%s')
+    return cur.execute(query, params)
+
+
+def db_insert(cur, query, params=None):
+    if params is None:
+        params = ()
+    if USE_POSTGRES:
+        query = query.rstrip(';') + ' RETURNING id'
+        query = query.replace('?', '%s')
+        cur.execute(query, params)
+        row = cur.fetchone()
+        return row[0] if row is not None else None
+    cur.execute(query, params)
+    return cur.lastrowid
+
+
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = connect_db()
     cur = conn.cursor()
-    cur.execute('''
+    pk = 'SERIAL PRIMARY KEY' if USE_POSTGRES else 'INTEGER PRIMARY KEY'
+    cur.execute(f'''
     CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
+        id {pk},
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL
     )
     ''')
     # create a default user and sample users
     try:
-        cur.execute('INSERT INTO users (email, password) VALUES (?, ?)',
+        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
                     ('admin@example.com', generate_password_hash('admin')))
-        cur.execute('INSERT INTO users (email, password) VALUES (?, ?)',
+        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
                     ('demo@example.com', generate_password_hash('demo')))
-        cur.execute('INSERT INTO users (email, password) VALUES (?, ?)',
+        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
                     ('leandro@example.com', generate_password_hash('demo')))
-        cur.execute('INSERT INTO users (email, password) VALUES (?, ?)',
+        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
                     ('other@example.com', generate_password_hash('demo')))
-        cur.execute('INSERT INTO users (email, password) VALUES (?, ?)',
+        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
                     ('ce@example.com', generate_password_hash('demo')))
     except Exception:
         pass
     conn.commit()
-    conn.close()
 
     # create a simple projects table for demo
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute('''
+    db_execute(cur, '''
     CREATE TABLE IF NOT EXISTS projects (
-        id INTEGER PRIMARY KEY,
+        id {pk},
         name TEXT NOT NULL,
         owner_email TEXT,
         assigned_emails TEXT,
         tasks_count INTEGER DEFAULT 0,
         tickets_count INTEGER DEFAULT 0
     )
-    ''')
+    '''.format(pk=pk))
     # seed some demo projects if empty
-    cur.execute('SELECT COUNT(*) FROM projects')
+    db_execute(cur, 'SELECT COUNT(*) FROM projects')
     if cur.fetchone()[0] == 0:
         demo = [
             ('Pyxel Odin Bayon', 'admin@example.com', 'admin@example.com,demo@example.com,leandro@example.com', 9, 0),
@@ -58,9 +98,9 @@ def init_db():
         ]
         cur.executemany('INSERT INTO projects (name, owner_email, assigned_emails, tasks_count, tickets_count) VALUES (?,?,?,?,?)', demo)
 
-    cur.execute('''
+    db_execute(cur, '''
     CREATE TABLE IF NOT EXISTS tasks (
-        id INTEGER PRIMARY KEY,
+        id {pk},
         project_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
@@ -75,18 +115,18 @@ def init_db():
         ticket_number TEXT,
         created_at TEXT
     )
-    ''')
-    cur.execute('''
+    '''.format(pk=pk))
+    db_execute(cur, '''
     CREATE TABLE IF NOT EXISTS task_changes (
-        id INTEGER PRIMARY KEY,
+        id {pk},
         task_id INTEGER NOT NULL,
         author TEXT,
         note TEXT,
         changed_at TEXT
     )
-    ''')
+    '''.format(pk=pk))
 
-    cur.execute('SELECT COUNT(*) FROM tasks')
+    db_execute(cur, 'SELECT COUNT(*) FROM tasks')
     if cur.fetchone()[0] == 0:
         demo_tasks = [
             (1, 'PyxelSolutions Odin (Localización Cubana) | Ajustes | No visualizar el módulo de Inventario si se configura que el usuario no tiene acceso al mismo', 'Ajuste de permisos en el módulo de inventario para usuarios sin acceso.', 'leandro@example.com', 'backlog', 'Funcionalidad', '2026-01-31', 'Certificación del producto', 'Sprint 1', 'Nacional', 'Pendiente', '16985', '2025-12-18'),
@@ -99,7 +139,7 @@ def init_db():
         ]
         cur.executemany('INSERT INTO tasks (project_id, title, description, assigned_email, stage, task_type, deadline, milestone, sprint, category, status, ticket_number, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', demo_tasks)
 
-    cur.execute('SELECT COUNT(*) FROM task_changes')
+    db_execute(cur, 'SELECT COUNT(*) FROM task_changes')
     if cur.fetchone()[0] == 0:
         changes = [
             (1, 'Guillermo Brito Acuña', 'Fecha límite: 17 de diciembre de 2025 → 31 de enero de 2026', '2026-01-07'),
@@ -111,9 +151,9 @@ def init_db():
     conn.close()
 
     # table to map allowed projects per user
-    conn = sqlite3.connect(DB_PATH)
+    conn = connect_db()
     cur = conn.cursor()
-    cur.execute('''
+    db_execute(cur, '''
     CREATE TABLE IF NOT EXISTS user_allowed_projects (
         user_id INTEGER NOT NULL,
         project_id INTEGER NOT NULL,

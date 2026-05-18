@@ -1,0 +1,13 @@
+{
+  "name": "gestion-proyecto-frontend",
+  "version": "1.0.0",
+  "description": "Frontend para gestión de proyectos - GitHub Pages",
+  "scripts": {
+    "serve": "python -m http.server 3000 --directory public",
+    "build": "echo 'Static site - no build needed'",
+    "deploy": "echo 'Deploy to GitHub Pages using Actions or gh-pages'"
+  },
+  "author": "Tu nombre",
+  "license": "MIT",
+  "devDependencies": {}
+}

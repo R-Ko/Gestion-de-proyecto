@@ -1,0 +1,44 @@
+{% extends "app_page.html" %}
+{% block content %}
+<section class="grid-layout">
+  <article class="card card-panel">
+    <div class="card-header">
+      <h2>Crear usuario nuevo</h2>
+      <p>Agrega usuarios y asígnales acceso a los proyectos desde aquí.</p>
+    </div>
+    <form class="form-grid" method="post" action="{{ url_for('create_user_route') }}">
+      <label class="field-group">
+        <span>Email</span>
+        <input name="email" type="email" placeholder="usuario@ejemplo.com" required>
+      </label>
+      <label class="field-group">
+        <span>Contraseña</span>
+        <input name="password" type="password" placeholder="Contraseña segura" required>
+      </label>
+      <button class="btn btn-primary" type="submit">Crear usuario</button>
+    </form>
+  </article>
+
+  <article class="card card-panel">
+    <div class="card-header">
+      <h2>Usuarios registrados</h2>
+      <p>Selecciona un usuario para configurar los proyectos que puede ver.</p>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr><th>Email</th><th>Acción</th></tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.email }}</td>
+            <td><a class="btn btn-small" href="{{ url_for('edit_user_projects', user_id=u.id) }}">Configurar proyectos</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}

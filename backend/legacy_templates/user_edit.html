@@ -1,0 +1,23 @@
+{% extends "app_page.html" %}
+{% block content %}
+<article class="card card-panel user-edit-card">
+  <div class="card-header">
+    <h2>Permisos de proyecto</h2>
+    <p>Configura los proyectos visibles para <strong>{{ user.email }}</strong>.</p>
+  </div>
+  <form class="form-stack" method="post">
+    <div class="checkbox-grid">
+      {% for p in projects %}
+      <label class="checkbox-item">
+        <input type="checkbox" name="projects" value="{{ p.id }}" {% if p.id in allowed %}checked{% endif %}>
+        <span>{{ p.name }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <div class="form-footer">
+      <button class="btn btn-primary" type="submit">Guardar cambios</button>
+      <a class="btn btn-link" href="{{ url_for('open_app', name='users') }}">Volver a usuarios</a>
+    </div>
+  </form>
+</article>
+{% endblock %}
