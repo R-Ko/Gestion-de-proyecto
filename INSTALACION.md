@@ -5,7 +5,7 @@
 - Python 3.8+
 - Node.js 18+
 - Git
-- Cuentas en: Supabase, Cloudflare, GitHub
+- Cuentas en: Aiven, Render, Vercel, GitHub
 
 ---
 
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 # Copiar variables de entorno
 cp .env.example .env
 
-# Editar .env con tus credenciales de Supabase
+# Editar .env con tus credenciales de Aiven
 # DATABASE_URL=postgresql://...
 ```
 
@@ -50,123 +50,105 @@ python -m http.server 3000
 
 ## 3️⃣ Prueba Local
 
-### Terminal 1 - Backend
+### Opción 1 - Ejecutar la aplicación monolítica local
+
+```bash
+cd "c:\Users\IamMiyuki\Desktop\Gestion de proyecto"
+.venv\Scripts\python.exe app.py
+```
+
+Abre `http://localhost:5000` en el navegador. Esta opción usa la base de datos local SQLite `users.db`.
+
+### Opción 2 - Backend y frontend por separado
 
 ```bash
 cd backend
-export DATABASE_URL="postgresql://user:pass@localhost/db"
-python app.py
-# API disponible en http://localhost:5000
+.venv\Scripts\python.exe app.py
 ```
 
-### Terminal 2 - Frontend
+En otra terminal:
 
 ```bash
 cd frontend/public
 python -m http.server 3000
-# Frontend disponible en http://localhost:3000
 ```
+
+Abre `http://localhost:3000` para acceder al frontend conectado al backend local.
 
 ---
 
-## 4️⃣ Configuración de Supabase
+## 4️⃣ Configuración de Aiven
 
-1. **Crear proyecto:**
-   - Ir a https://supabase.com → New Project
-   - Llenar datos
-   - Copiar "Connection String"
+1. **Crear servicio**
+   - Ir a https://console.aiven.io → Create Service
+   - Seleccionar `PostgreSQL` o `MySQL`
+   - Configurar plan, usuario y región
+   - Esperar a que el servicio esté activo
 
-2. **Obtener credenciales:**
-   - Ir a Settings → Database
-   - Copiar URL PostgreSQL
+2. **Obtener credenciales de conexión**
+   - Copiar la URI de conexión completa
+   - Si usas MySQL, incluye `ssl-mode=REQUIRED`
 
 3. **Crear .env en backend:**
-   ```
-   DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
+   ```bash
+   cd backend
+   echo "DATABASE_URL=postgresql://user:password@host:port/dbname" > .env
+   echo "SECRET_KEY=tu-clave-secreta" >> .env
+   echo "FLASK_ENV=production" >> .env
    ```
 
 ---
 
 ## 5️⃣ Despliegue en Producción
 
-### Opción A: Cloudflare Workers (Recomendado)
+### Backend - Render
 
 ```bash
-# Instalar Wrangler
-npm install -g wrangler
-
-# Loguear en Cloudflare
-wrangler login
-
-# Desplegar
-cd backend
-wrangler deploy --env production
+# En Render, crea un nuevo Web Service y selecciona Python.
+# Configura los comandos:
+# Build: pip install -r backend/requirements.txt
+# Start: python backend/app.py
 ```
 
-### Opción B: Heroku (Alternativa)
+Configura variables de entorno en Render:
+- `DATABASE_URL` = URI de Aiven
+- `SECRET_KEY` = clave segura
+- `FLASK_ENV` = production
+- `CORS_ORIGINS` = https://<tu-sitio-vercel>.vercel.app
+
+### Frontend - Vercel
 
 ```bash
-# Instalar Heroku CLI
-npm install -g heroku
-
-# Loguear
-heroku login
-
-# Crear app
-heroku create nombre-app
-
-# Configurar base de datos
-heroku config:set DATABASE_URL="postgresql://..."
-
-# Desplegar
-git push heroku main
+# Importa el repositorio en Vercel
+# Selecciona `frontend` como directorio de despliegue
+# Output Directory: public
+# Build Command: echo "Static site"
 ```
 
-### Frontend - GitHub Pages
-
-```bash
-cd frontend/public
-
-# Inicializar repo si no existe
-git init
-git remote add origin https://github.com/usuario/repo.git
-
-# Agregar y pushear
-git add .
-git commit -m "Despliegue inicial"
-git push -u origin main
-
-# Habilitar GitHub Pages
-# Settings → Pages → Source: main branch
+Configura la URL del backend editando `frontend/public/app.js`:
+```javascript
+const API_URL = 'https://tu-backend.onrender.com';
 ```
 
 ---
 
 ## 6️⃣ Variables de Entorno en Producción
 
-### Backend (Cloudflare)
+### Backend (Render)
 
-En `wrangler.toml`:
-```toml
-[env.production]
-vars = { 
-    ENVIRONMENT = "production",
-    DATABASE_URL = "postgresql://..."
-}
+Configura estas variables desde el panel de Render:
+```
+DATABASE_URL=postgresql://user:password@host:port/dbname
+SECRET_KEY=tu-clave-super-segura
+FLASK_ENV=production
+CORS_ORIGINS=https://<tu-sitio-vercel>.vercel.app
 ```
 
-### Backend (Heroku)
+### Frontend (Vercel)
 
-```bash
-heroku config:set SECRET_KEY="super-secret"
-heroku config:set DATABASE_URL="postgresql://..."
-```
-
-### Frontend (GitHub Pages)
-
-En `frontend/public/app.js`:
+Actualiza la URL del backend en `frontend/public/app.js`:
 ```javascript
-const API_URL = 'https://api.tudominio.com';
+const API_URL = 'https://tu-backend.onrender.com';
 ```
 
 ---
@@ -178,8 +160,6 @@ proyecto/
 ├── backend/
 │   ├── app.py               ✓
 │   ├── requirements.txt     ✓
-│   ├── wrangler.toml        ✓
-│   ├── package.json         ✓
 │   ├── .env.example         ✓
 │   └── .env                 (no commitar)
 │
@@ -188,43 +168,36 @@ proyecto/
 │   │   ├── index.html       ✓
 │   │   ├── app.js           ✓
 │   │   └── styles.css       ✓
-│   ├── firebase.json        ✓
 │   ├── package.json         ✓
 │   └── .env.example         ✓
 │
 ├── ARQUITECTURA_FRONTEND.md ✓
 ├── README.md                ✓
 ├── .gitignore              ✓
-├── deploy.sh               ✓
-└── deploy.bat              ✓
 ```
-
 ---
 
 ## 🔗 URLs de Referencia
 
-- **Supabase:** https://supabase.com/docs
-- **Cloudflare Workers:** https://developers.cloudflare.com/workers/
-- **GitHub Pages:** https://pages.github.com/
+- **Aiven:** https://aiven.io/
+- **Render:** https://render.com/
+- **Vercel:** https://vercel.com/
 - **Flask:** https://flask.palletsprojects.com/
-- **Wrangler CLI:** https://developers.cloudflare.com/workers/wrangler/
 
 ---
 
 ## ✅ Checklist de Despliegue
 
-- [ ] Supabase proyecto creado y credenciales copiadas
-- [ ] Variables de entorno configuradas (.env)
+- [ ] Servicio Aiven creado y credenciales copiadas
+- [ ] Variables de entorno configuradas en Render
 - [ ] Backend probado localmente
 - [ ] Frontend probado localmente
-- [ ] GitHub repo creado
-- [ ] Cloudflare account y dominio configurado
-- [ ] wrangler.toml actualizado con credenciales
-- [ ] Backend desplegado en Cloudflare
-- [ ] Frontend desplegado en GitHub Pages
+- [ ] Repo Git configurado
+- [ ] Proyecto de Render desplegado
+- [ ] Sitio en Vercel desplegado
 - [ ] CORS configurado correctamente
 - [ ] API URL actualizada en frontend
-- [ ] URLs customizadas configuradas (opcional)
+- [ ] Dominio personalizado configurado (opcional)
 
 ---
 
@@ -232,23 +205,23 @@ proyecto/
 
 ### Error: "psycopg2-binary is required"
 ```bash
-pip install psycopg2-binary
+.venv\Scripts\python.exe -m pip install psycopg2-binary
 ```
 
 ### Error: "CORS error"
-- Verificar que tu origin esté en CORS_ALLOWED_ORIGINS
+- Verificar que `CORS_ORIGINS` incluya el dominio de Vercel
 - En desarrollo: `http://localhost:3000`
 
 ### Error: "Database connection failed"
-- Verificar DATABASE_URL válida
-- Probar conexión: `psql $DATABASE_URL -c "SELECT 1"`
+- Verificar que `DATABASE_URL` sea válida
+- Probar conexión: `psql "$DATABASE_URL" -c "SELECT 1"`
 
 ### Frontend no ve cambios
-- Limpiar cache de GitHub Pages
-- Esperar 5-10 minutos de propagación
+- Revisar Deployments en Vercel
+- Forzar redeploy desde Vercel si es necesario
 
 ---
 
 ## 📞 Soporte
 
-Documentación completa en [ARQUITECTURA_FRONTEND.md](../ARQUITECTURA_FRONTEND.md)
+Documentación completa en [ARQUITECTURA_FRONTEND.md](./ARQUITECTURA_FRONTEND.md)

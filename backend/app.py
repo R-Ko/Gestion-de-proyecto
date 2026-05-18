@@ -1,13 +1,15 @@
 """
-API Backend - Compatible con Cloudflare Workers
-Conecta con Supabase para la base de datos
+API Backend - Flask app para Render
+Conecta con Aiven/PostgreSQL o MySQL
 """
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 import os
+import ssl
 import time
+import urllib.parse as urlparse
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
@@ -18,6 +20,12 @@ try:
 except ImportError:
     psycopg2 = None
 
+try:
+    import pymysql
+    from pymysql.cursors import DictCursor
+except ImportError:
+    pymysql = None
+
 load_dotenv()
 
 # Configuración
@@ -27,7 +35,16 @@ SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL no configurada. Usa Supabase: postgresql://user:password@host/db")
+    raise ValueError("DATABASE_URL no configurada. Usa postgresql://... o mysql://...")
+
+parsed_db_url = urlparse.urlparse(DATABASE_URL)
+DB_ENGINE = None
+if parsed_db_url.scheme in ('postgres', 'postgresql'):
+    DB_ENGINE = 'postgres'
+elif parsed_db_url.scheme == 'mysql':
+    DB_ENGINE = 'mysql'
+else:
+    raise ValueError(f"Esquema de DATABASE_URL no soportado: {parsed_db_url.scheme}")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
@@ -51,10 +68,35 @@ def now_timestamp():
 
 
 def connect_db():
-    """Conectar a Supabase PostgreSQL"""
-    if psycopg2 is None:
-        raise RuntimeError('psycopg2-binary es requerido')
-    return psycopg2.connect(DATABASE_URL)
+    """Conectar a Postgres o MySQL según DATABASE_URL."""
+    if DB_ENGINE == 'postgres':
+        if psycopg2 is None:
+            raise RuntimeError('psycopg2-binary es requerido')
+        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+
+    if DB_ENGINE == 'mysql':
+        if pymysql is None:
+            raise RuntimeError('pymysql es requerido para MySQL')
+
+        query_params = dict(urlparse.parse_qsl(parsed_db_url.query))
+        ssl_args = None
+        ssl_mode = query_params.get('ssl-mode') or query_params.get('sslmode')
+        if ssl_mode and ssl_mode.lower() in ('required', 'require', 'true', '1'):
+            ssl_args = {'ssl': {}}
+
+        return pymysql.connect(
+            host=parsed_db_url.hostname,
+            port=parsed_db_url.port or 3306,
+            user=parsed_db_url.username,
+            password=parsed_db_url.password,
+            database=parsed_db_url.path.lstrip('/'),
+            charset='utf8mb4',
+            cursorclass=DictCursor,
+            ssl=ssl_args,
+            autocommit=False
+        )
+
+    raise RuntimeError('Motor de base de datos desconocido')
 
 
 def db_execute(conn, query, params=None):
@@ -71,7 +113,7 @@ def db_fetch(conn, query, params=None):
     """Obtener resultado de query"""
     if params is None:
         params = ()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor()
     cur.execute(query, params)
     result = cur.fetchall()
     cur.close()
@@ -82,7 +124,7 @@ def db_fetch_one(conn, query, params=None):
     """Obtener un resultado de query"""
     if params is None:
         params = ()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor()
     cur.execute(query, params)
     result = cur.fetchone()
     cur.close()
@@ -95,34 +137,38 @@ def init_db():
     cur = conn.cursor()
     
     try:
+        user_id_type = 'SERIAL PRIMARY KEY' if DB_ENGINE == 'postgres' else 'INT PRIMARY KEY AUTO_INCREMENT'
+        timestamp_default = 'TIMESTAMP DEFAULT NOW()' if DB_ENGINE == 'postgres' else 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+        foreign_key_syntax = 'REFERENCES projects(id)' if DB_ENGINE == 'postgres' else 'REFERENCES projects(id)'
+
         # Crear tabla users
-        cur.execute('''
+        cur.execute(f'''
         CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
+            id {user_id_type},
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT NOW()
+            created_at {timestamp_default}
         )
         ''')
         
         # Crear tabla projects
-        cur.execute('''
+        cur.execute(f'''
         CREATE TABLE IF NOT EXISTS projects (
-            id SERIAL PRIMARY KEY,
+            id {user_id_type},
             name TEXT NOT NULL,
             owner_email TEXT,
             assigned_emails TEXT,
             tasks_count INTEGER DEFAULT 0,
             tickets_count INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT NOW()
+            created_at {timestamp_default}
         )
         ''')
         
         # Crear tabla tasks
-        cur.execute('''
+        cur.execute(f'''
         CREATE TABLE IF NOT EXISTS tasks (
-            id SERIAL PRIMARY KEY,
-            project_id INTEGER NOT NULL REFERENCES projects(id),
+            id {user_id_type},
+            project_id INTEGER NOT NULL {foreign_key_syntax},
             title TEXT NOT NULL,
             description TEXT,
             assigned_email TEXT,
@@ -134,18 +180,18 @@ def init_db():
             category TEXT,
             status TEXT,
             ticket_number TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
+            created_at {timestamp_default}
         )
         ''')
         
         # Crear tabla task_changes (auditoría)
-        cur.execute('''
+        cur.execute(f'''
         CREATE TABLE IF NOT EXISTS task_changes (
-            id SERIAL PRIMARY KEY,
+            id {user_id_type},
             task_id INTEGER NOT NULL REFERENCES tasks(id),
             author TEXT,
             note TEXT,
-            changed_at TIMESTAMP DEFAULT NOW()
+            changed_at {timestamp_default}
         )
         ''')
         
@@ -277,23 +323,32 @@ def api_create_project():
     cur = conn.cursor()
     
     try:
-        cur.execute('''
-            INSERT INTO projects (name, owner_email, assigned_emails)
-            VALUES (%s, %s, %s)
-            RETURNING id, name, owner_email, assigned_emails
-        ''', (name, session.get('user'), session.get('user')))
-        
-        result = cur.fetchone()
+        if DB_ENGINE == 'postgres':
+            cur.execute('''
+                INSERT INTO projects (name, owner_email, assigned_emails)
+                VALUES (%s, %s, %s)
+                RETURNING id, name, owner_email, assigned_emails
+            ''', (name, session.get('user'), session.get('user')))
+            result = cur.fetchone()
+        else:
+            cur.execute('''
+                INSERT INTO projects (name, owner_email, assigned_emails)
+                VALUES (%s, %s, %s)
+            ''', (name, session.get('user'), session.get('user')))
+            project_id = cur.lastrowid
+            conn.commit()
+            result = db_fetch_one(conn, 'SELECT id, name, owner_email, assigned_emails FROM projects WHERE id = %s', (project_id,))
+
         conn.commit()
         
         return jsonify({
             'success': True,
             'message': 'Proyecto creado',
             'project': {
-                'id': result[0],
-                'name': result[1],
-                'owner_email': result[2],
-                'assigned_emails': result[3]
+                'id': result[0] if DB_ENGINE == 'postgres' else result['id'],
+                'name': result[1] if DB_ENGINE == 'postgres' else result['name'],
+                'owner_email': result[2] if DB_ENGINE == 'postgres' else result['owner_email'],
+                'assigned_emails': result[3] if DB_ENGINE == 'postgres' else result['assigned_emails']
             }
         }), 201
     except Exception as e:
@@ -369,32 +424,53 @@ def api_create_task():
     cur = conn.cursor()
     
     try:
-        cur.execute('''
-            INSERT INTO tasks 
-            (project_id, title, description, assigned_email, stage, task_type, deadline, status, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, title, project_id
-        ''', (
-            project_id,
-            title,
-            data.get('description', ''),
-            data.get('assigned_email', session.get('user')),
-            data.get('stage', 'backlog'),
-            data.get('task_type', 'Codificación'),
-            data.get('deadline', ''),
-            data.get('status', 'Pendiente'),
-        ))
-        
-        result = cur.fetchone()
+        if DB_ENGINE == 'postgres':
+            cur.execute('''
+                INSERT INTO tasks 
+                (project_id, title, description, assigned_email, stage, task_type, deadline, status, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, title, project_id
+            ''', (
+                project_id,
+                title,
+                data.get('description', ''),
+                data.get('assigned_email', session.get('user')),
+                data.get('stage', 'backlog'),
+                data.get('task_type', 'Codificación'),
+                data.get('deadline', ''),
+                data.get('status', 'Pendiente'),
+                now_timestamp(),
+            ))
+            result = cur.fetchone()
+        else:
+            cur.execute('''
+                INSERT INTO tasks 
+                (project_id, title, description, assigned_email, stage, task_type, deadline, status, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                project_id,
+                title,
+                data.get('description', ''),
+                data.get('assigned_email', session.get('user')),
+                data.get('stage', 'backlog'),
+                data.get('task_type', 'Codificación'),
+                data.get('deadline', ''),
+                data.get('status', 'Pendiente'),
+                now_timestamp(),
+            ))
+            task_id = cur.lastrowid
+            conn.commit()
+            result = db_fetch_one(conn, 'SELECT id, title, project_id FROM tasks WHERE id = %s', (task_id,))
+
         conn.commit()
         
         return jsonify({
             'success': True,
             'message': 'Tarea creada',
             'task': {
-                'id': result[0],
-                'title': result[1],
-                'project_id': result[2]
+                'id': result[0] if DB_ENGINE == 'postgres' else result['id'],
+                'title': result[1] if DB_ENGINE == 'postgres' else result['title'],
+                'project_id': result[2] if DB_ENGINE == 'postgres' else result['project_id']
             }
         }), 201
     except Exception as e:

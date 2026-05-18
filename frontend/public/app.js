@@ -1,10 +1,14 @@
 /**
  * APP.JS - Lógica Frontend
- * Se comunica con API backend en Cloudflare Workers + Supabase
+ * Se comunica con API backend en Render + Aiven
  */
 
 // Configuración
-const API_URL = process.env.API_URL || 'http://localhost:5000';
+const API_URL = (typeof process !== 'undefined' && process.env && process.env.API_URL)
+    ? process.env.API_URL
+    : (typeof window !== 'undefined' && window.API_URL)
+        ? window.API_URL
+        : 'http://localhost:5000';
 const isDevelopment = window.location.hostname === 'localhost';
 
 // Estado global

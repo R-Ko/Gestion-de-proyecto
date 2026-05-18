@@ -4,9 +4,9 @@
 
 Sistema de gestión de proyectos y tareas estilo **Odoo** con arquitectura moderna y escalable:
 
-- **Frontend**: SPA estático en GitHub Pages  
-- **Backend**: API serverless en Cloudflare Workers  
-- **Base de Datos**: PostgreSQL en Supabase  
+- **Frontend**: SPA estático en Vercel  
+- **Backend**: API en Render (Python/Flask)  
+- **Base de Datos**: PostgreSQL/MySQL en Aiven  
 
 ---
 
@@ -15,19 +15,17 @@ Sistema de gestión de proyectos y tareas estilo **Odoo** con arquitectura moder
 ```
 proyecto/
 │
-├── backend/                    # API Serverless (Cloudflare Workers)
-│   ├── app.py                 # API Flask compatible con Workers
-│   ├── wrangler.toml          # Configuración de Cloudflare
+├── backend/                    # API Backend en Render / Flask
+│   ├── app.py                 # API Flask compatible con Render
 │   ├── requirements.txt       # Dependencias Python
 │   ├── Procfile               # Para despliegue alternativo
-│   └── package.json           # Dependencias Node.js
+│   └── .env.example           # Ejemplo de variables de entorno
 │
-├── frontend/                   # SPA estático (GitHub Pages)
+├── frontend/                   # SPA estático en Vercel
 │   ├── public/
 │   │   ├── index.html         # HTML principal
 │   │   ├── app.js             # Lógica JavaScript
 │   │   └── styles.css         # Estilos (tema oscuro Odoo)
-│   ├── firebase.json          # Config Firebase Hosting
 │   └── package.json
 │
 ├── ARQUITECTURA_FRONTEND.md   # Documentación técnica completa
@@ -38,126 +36,103 @@ proyecto/
 
 ## 🚀 Despliegue
 
-### 1️⃣ Backend - Cloudflare Workers + Supabase
+### 1️⃣ Base de Datos - Aiven
 
 #### Requisitos:
-- Cuenta en [Cloudflare](https://dash.cloudflare.com)
-- Cuenta en [Supabase](https://supabase.com)
-- CLI instalado: `npm install -g wrangler`
+- Cuenta en [Aiven](https://console.aiven.io)
+- Servicio PostgreSQL o MySQL creado
 
 #### Pasos:
 
-1. **Crear base de datos en Supabase:**
-   - Ir a https://supabase.com → Nuevo proyecto
-   - Copiar `Connection String` (PostgreSQL URL)
+1. **Crear un servicio en Aiven:**
+   - Ir a https://console.aiven.io → Create Service
+   - Elegir `PostgreSQL` o `MySQL`
+   - Definir plan y región
+   - Esperar a que el servicio esté activo
 
-2. **Configurar variables de entorno:**
+2. **Obtener credenciales de conexión:**
+   - Ir a la página del servicio
+   - Copiar la `Connection string` o `URI` completo
+   - Si usas MySQL, asegúrate de incluir `ssl-mode=REQUIRED`
+
+3. **Configurar variables de entorno en backend:**
    ```bash
    cd backend
-   
-   # Crear archivo .env
-   echo "DATABASE_URL=postgresql://user:password@db.supabase.co:5432/postgres" > .env
+   echo "DATABASE_URL=postgresql://user:password@host:port/dbname" > .env
    echo "SECRET_KEY=tu-clave-secreta-super-segura" >> .env
+   echo "FLASK_ENV=production" >> .env
    ```
 
-3. **Actualizar `wrangler.toml`:**
-   ```toml
-   [env.production]
-   route = "https://api.tudominio.com/*"
-   zone_id = "tu_cloudflare_zone_id"
-   
-   vars = { DATABASE_URL = "tu_database_url" }
-   ```
-
-4. **Desplegar en Cloudflare:**
+4. **Inicializar la base de datos:**
    ```bash
    cd backend
-   wrangler deploy --env production
+   .venv\Scripts\python.exe app.py
    ```
-
-   **Alternativa (Heroku):**
-   ```bash
-   heroku create nombre-app
-   heroku config:set DATABASE_URL="postgresql://..."
-   git push heroku main
-   ```
+   El primer arranque creará las tablas necesarias.
 
 ---
 
-### 2️⃣ Frontend - GitHub Pages
+### 2️⃣ Backend - Render
 
 #### Requisitos:
-- Cuenta en [GitHub](https://github.com)
-- Git instalado
+- Cuenta en [Render](https://render.com)
+- Repositorio Git con la rama `main`
 
 #### Pasos:
 
-1. **Crear repositorio GitHub:**
-   ```bash
-   cd frontend/public
-   git init
-   git add .
-   git commit -m "Primer commit"
-   git remote add origin https://github.com/tu-usuario/gestion-proyectos.git
-   git branch -M main
-   git push -u origin main
-   ```
+1. **Crear un nuevo Web Service en Render:**
+   - Importar el repositorio desde GitHub
+   - Seleccionar `Python` como Runtime
+   - Usar el comando de Build: `pip install -r backend/requirements.txt`
+   - Usar el comando de Start: `python backend/app.py`
+   - Definir `Root Directory` o `Start Directory` según el proyecto
 
-2. **Configurar GitHub Pages:**
-   - Ir a Settings → Pages
-   - Source: Deploy from a branch
-   - Branch: `main`, folder: `/(root)` o `/docs`
-   - Guardar
+2. **Configurar variables de entorno en Render:**
+   - `DATABASE_URL` = URI de Aiven
+   - `SECRET_KEY` = clave segura
+   - `FLASK_ENV` = `production`
+   - `CORS_ORIGINS` = `https://<tu-sitio-vercel>.vercel.app`
 
-3. **Configurar API URL (en `frontend/public/app.js`):**
-   ```javascript
-   const API_URL = 'https://api.tudominio.com'; // Cambiar a tu URL de Cloudflare
-   ```
-
-4. **Actualizar CORS en backend:**
-   ```python
-   CORS(app, resources={
-       r"/api/*": {
-           "origins": [
-               "https://tu-usuario.github.io",
-               "https://tudominio.com"
-           ],
-           ...
-       }
-   })
-   ```
-
-5. **Hacer push a GitHub:**
-   ```bash
-   git add frontend/public/app.js
-   git commit -m "Actualizar API URL"
-   git push
-   ```
-
-   El sitio estará disponible en: `https://tu-usuario.github.io/gestion-proyectos`
+3. **Desplegar:**
+   - Guardar y desplegar el servicio
+   - Render construirá y publicará la API
 
 ---
 
-### 3️⃣ Base de Datos - Supabase
+### 3️⃣ Frontend - Vercel
 
-#### Configuración:
+#### Requisitos:
+- Cuenta en [Vercel](https://vercel.com)
+- Repo Git con la carpeta `frontend`
 
-1. **Crear proyecto en Supabase:** https://supabase.com
+#### Pasos:
 
-2. **Copiar credenciales:**
-   - Project URL
-   - anon/public key
-   - service_role key (para backend)
+1. **Crear un nuevo proyecto en Vercel:**
+   - Importar el repositorio desde GitHub
+   - Seleccionar `frontend` como directorio de despliegue
+   - Configurar `Build Command` como `echo "Static site"`
+   - Configurar `Output Directory` como `public`
 
-3. **Ejecutar script de inicialización:**
-   ```bash
-   psql postgresql://user:pass@db.supabase.co:5432/postgres < init_db.sql
-   ```
+2. **Configurar la URL del backend:**
+   - Editar `frontend/public/app.js`
+   - Ajustar `window.API_URL` en el HTML o usar una constante directa:
+     ```javascript
+     const API_URL = 'https://tu-backend.onrender.com';
+     ```
 
-   O desde la consola SQL de Supabase:
-   ```sql
-   -- Backend ejecutará automáticamente con init_db()
-   ```
+3. **Desplegar:**
+   - Guardar la configuración
+   - Desplegar el sitio en Vercel
+   - El dominio de Vercel quedará activo automáticamente
+
+---
+
+### 4️⃣ Flujo de despliegue completo
+
+1. El frontend se despliega en Vercel como sitio estático.
+2. El backend se despliega en Render como servicio Python/Flask.
+3. Aiven provee la base de datos PostgreSQL/MySQL y ofrece SSL en producción.
+4. El frontend consume la API de Render mediante `API_URL`.
 
 ---
 
@@ -168,17 +143,17 @@ proyecto/
 DATABASE_URL=postgresql://user:pass@host/db
 SECRET_KEY=tu-clave-super-secura
 FLASK_ENV=production
-CORS_ORIGINS=https://tu-usuario.github.io,https://tudominio.com
+CORS_ORIGINS=https://<tu-proyecto>.vercel.app
 ```
 
 ### Frontend (`frontend/public/app.js`)
 ```javascript
-const API_URL = 'https://api.tudominio.com';
+const API_URL = 'https://tu-backend.onrender.com';
 ```
 
 ---
 
-## 📱 Credenciales de Prueba
+##  Credenciales de Prueba
 
 ```
 Email: admin@example.com
@@ -220,70 +195,59 @@ python -m http.server 3000  # http://localhost:3000
 
 ## 🌐 Dominios Personalizados
 
-### Cloudflare Workers + Custom Domain
+### Render + Dominio personalizado
 
-1. En Cloudflare Dashboard:
-   - Workers & Pages → Tu Worker → Settings
-   - Routes → Agregar ruta: `api.tudominio.com/*`
-   - Zone: `tudominio.com`
+1. En Render, ve al servicio del backend.
+2. Agrega un dominio personalizado.
+3. Sigue las instrucciones de DNS para CNAME o A records.
 
-2. En DNS:
-   - CNAME: `api` → `tu-account.workers.dev`
+### Vercel + Dominio personalizado
 
-### GitHub Pages + Custom Domain
-
-1. En GitHub:
-   - Settings → Pages
-   - Custom domain: `tudominio.com`
-   - Agregar CNAME en DNS
-
-2. En DNS (registrador):
-   ```
-   A: tudominio.com → 185.199.108.153
-   A: tudominio.com → 185.199.109.153
-   A: tudominio.com → 185.199.110.153
-   A: tudominio.com → 185.199.111.153
-   ```
+1. En Vercel, ve al proyecto del frontend.
+2. Agrega el dominio personalizado.
+3. Configura el DNS según las instrucciones de Vercel.
 
 ---
 
 ## 📊 Monitoreo y Logs
 
-### Cloudflare Workers
-```bash
-wrangler tail --env production
-```
+### Render
+- Dashboard → Service → Logs
+- Health checks y despliegues
 
-### Supabase
-- Dashboard → Logs
-- Analytics → Performance
+### Vercel
+- Dashboard → Deployments
+- Logs de ejecución y errores
 
-### GitHub Pages
-- Settings → Pages → Visit site
-- GitHub Actions para CI/CD
+### Aiven
+- Console → Service → Logs
+- Metrics → Database
 
 ---
 
 ## 🔧 Troubleshooting
 
-### CORS errors en frontend
-```javascript
-// En backend/app.py
-CORS(app, origins=["*"])  # Para desarrollo
+### CORS errores en el frontend
+```python
+# En backend/app.py
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["https://<tu-sitio-vercel>.vercel.app"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 ```
 
 ### Base de datos no conecta
 ```bash
-# Verificar conexión
-psql $DATABASE_URL -c "SELECT 1"
+# Verificar conexión con Aiven
+psql "$DATABASE_URL" -c "SELECT 1"
 ```
 
-### GitHub Pages no actualiza
+### Despliegue en Vercel no actualiza
 ```bash
-# Limpiar cache
-git add .
-git commit -m "Update" --allow-empty
-git push
+# Revisar Deployment en Vercel y redeploy
 ```
 
 ---
