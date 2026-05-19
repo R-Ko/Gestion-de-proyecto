@@ -297,7 +297,7 @@
       <p><i class="fas fa-robot" style="color:#b87eff;"></i> Define el nombre y los usuarios asignados para comenzar a gestionar el proyecto con IA.</p>
     </div>
 
-    <form class="form-grid" method="post" action="#" id="createProjectForm">
+    <form class="form-grid" method="post" action="{{ url_for('create_project') }}" id="createProjectForm">
       <!-- Nombre del proyecto -->
       <div class="field-group">
         <span><i class="fas fa-folder-tree"></i> Nombre del proyecto</span>
