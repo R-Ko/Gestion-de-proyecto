@@ -57,21 +57,27 @@ def init_db():
     CREATE TABLE IF NOT EXISTS users (
         id {pk},
         email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
+        password TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user'
     )
     ''')
+    if not USE_POSTGRES:
+        cur.execute("PRAGMA table_info(users)")
+        existing_columns = [row[1] for row in cur.fetchall()]
+        if 'role' not in existing_columns:
+            db_execute(cur, "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
     # create a default user and sample users
     try:
-        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
-                    ('admin@example.com', generate_password_hash('admin')))
-        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
-                    ('demo@example.com', generate_password_hash('demo')))
-        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
-                    ('leandro@example.com', generate_password_hash('demo')))
-        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
-                    ('other@example.com', generate_password_hash('demo')))
-        db_execute(cur, 'INSERT INTO users (email, password) VALUES (?, ?)',
-                    ('ce@example.com', generate_password_hash('demo')))
+        db_execute(cur, 'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
+                    ('admin@example.com', generate_password_hash('admin'), 'admin'))
+        db_execute(cur, 'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
+                    ('demo@example.com', generate_password_hash('demo'), 'user'))
+        db_execute(cur, 'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
+                    ('leandro@example.com', generate_password_hash('demo'), 'user'))
+        db_execute(cur, 'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
+                    ('other@example.com', generate_password_hash('demo'), 'user'))
+        db_execute(cur, 'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
+                    ('ce@example.com', generate_password_hash('demo'), 'user'))
     except Exception:
         pass
     conn.commit()
@@ -199,6 +205,10 @@ CATEGORY_OPTIONS = [
 def status_for_stage(stage):
     return STAGE_STATUS_MAP.get(stage, 'Pendiente')
 
+
+def is_admin_session():
+    return session.get('user_role') == 'admin' or session.get('user') == 'admin@example.com'
+
 # Ensure DB initialized at import time to avoid decorator compatibility issues
 init_db()
 
@@ -206,7 +216,7 @@ init_db()
 def get_user(email):
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
-    cur.execute('SELECT id, email, password FROM users WHERE email=?', (email,))
+    cur.execute('SELECT id, email, password, COALESCE(role, "user") FROM users WHERE email=?', (email,))
     row = cur.fetchone()
     conn.close()
     return row
@@ -225,6 +235,7 @@ def login():
         user = get_user(email)
         if user and check_password_hash(user[2], password):
             session['user'] = user[1]
+            session['user_role'] = user[3]
             flash('Inicio de sesión correcto', 'success')
             return redirect(url_for('apps'))
         else:
@@ -245,9 +256,9 @@ def apps():
     if 'user' not in session:
         return redirect(url_for('login'))
     # Only show specific modules: Users (for admin) and Project (for all)
-    user_email = session.get('user')
+    user_role = session.get('user_role')
     modules = []
-    if user_email == 'admin@example.com':
+    if user_role == 'admin':
         modules.append(('Usuarios','users'))
     # Project module available to everyone
     modules.append(('Proyecto','project'))
@@ -262,6 +273,7 @@ def open_app(name):
     if name == 'project':
         # get filter param
         filter_by = request.args.get('filter', 'all')
+        user_role = session.get('user_role')
         user_email = session.get('user')
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
@@ -275,18 +287,17 @@ def open_app(name):
             cur.execute('SELECT id, name, owner_email, assigned_emails, tasks_count, tickets_count FROM projects')
         projects = [dict(id=r[0], name=r[1], owner=r[2], assigned=r[3], tasks=r[4], tickets=r[5]) for r in cur.fetchall()]
         conn.close()
-        return render_template('project_list.html', projects=projects, filter_by=filter_by)
+        return render_template('project_list.html', projects=projects, filter_by=filter_by, user=user_email)
     # Users module: admin-only creation and project assignment
     if name == 'users':
-        user_email = session.get('user')
-        if user_email != 'admin@example.com':
+        if session.get('user_role') != 'admin':
             # non-admins see placeholder
             return render_template('app_page.html', name='users')
         # admin: list users and their allowed projects
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
-        cur.execute('SELECT id, email FROM users')
-        users = [dict(id=r[0], email=r[1]) for r in cur.fetchall()]
+        cur.execute('SELECT id, email, COALESCE(role, "user") FROM users')
+        users = [dict(id=r[0], email=r[1], role=r[2]) for r in cur.fetchall()]
         cur.execute('SELECT id, name FROM projects')
         projects = [dict(id=r[0], name=r[1]) for r in cur.fetchall()]
         # fetch allowed projects map
@@ -303,6 +314,9 @@ def open_app(name):
 def create_project():
     if 'user' not in session:
         return redirect(url_for('login'))
+    if not is_admin_session():
+        flash('Solo administradores pueden crear proyectos', 'danger')
+        return redirect(url_for('open_app', name='project'))
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         assigned = request.form.get('assigned_emails', '').strip()
@@ -319,6 +333,44 @@ def create_project():
         flash('Proyecto creado', 'success')
         return redirect(url_for('open_app', name='project'))
     return render_template('project_create.html')
+
+
+@app.route('/project/<int:project_id>/delete', methods=['POST'])
+def delete_project(project_id):
+    if 'user' not in session or not is_admin_session():
+        flash('Solo administradores pueden eliminar proyectos', 'danger')
+        return redirect(url_for('open_app', name='project'))
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute('DELETE FROM task_changes WHERE task_id IN (SELECT id FROM tasks WHERE project_id=?)', (project_id,))
+    cur.execute('DELETE FROM tasks WHERE project_id=?', (project_id,))
+    cur.execute('DELETE FROM projects WHERE id=?', (project_id,))
+    conn.commit()
+    conn.close()
+    flash('Proyecto eliminado', 'success')
+    return redirect(url_for('open_app', name='project'))
+
+
+@app.route('/task/<int:task_id>/delete', methods=['POST'])
+def delete_task(task_id):
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute('SELECT project_id FROM tasks WHERE id=?', (task_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        flash('Tarea no encontrada', 'danger')
+        return redirect(url_for('open_app', name='project'))
+    project_id = row[0]
+    cur.execute('DELETE FROM task_changes WHERE task_id=?', (task_id,))
+    cur.execute('DELETE FROM tasks WHERE id=?', (task_id,))
+    cur.execute('UPDATE projects SET tasks_count = CASE WHEN tasks_count > 0 THEN tasks_count - 1 ELSE 0 END WHERE id=?', (project_id,))
+    conn.commit()
+    conn.close()
+    flash('Tarea eliminada', 'success')
+    return redirect(url_for('project_detail', project_id=project_id))
 
 
 @app.route('/project/<int:project_id>/task/create', methods=['GET', 'POST'])
@@ -504,17 +556,20 @@ def task_detail(task_id):
 
 @app.route('/app/users/create', methods=['POST'])
 def create_user_route():
-    if 'user' not in session or session.get('user') != 'admin@example.com':
+    if 'user' not in session or session.get('user_role') != 'admin':
         return redirect(url_for('login'))
     email = request.form.get('email')
     password = request.form.get('password')
+    role = request.form.get('role', 'user')
+    if role not in ['admin', 'user']:
+        role = 'user'
     if not email or not password:
         flash('Email y contraseña requeridos', 'danger')
         return redirect(url_for('open_app', name='users'))
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     try:
-        cur.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, generate_password_hash(password)))
+        cur.execute('INSERT INTO users (email, password, role) VALUES (?, ?, ?)', (email, generate_password_hash(password), role))
         conn.commit()
         flash('Usuario creado', 'success')
     except Exception as e:
@@ -525,20 +580,24 @@ def create_user_route():
 
 @app.route('/app/users/<int:user_id>/projects', methods=['GET', 'POST'])
 def edit_user_projects(user_id):
-    if 'user' not in session or session.get('user') != 'admin@example.com':
+    if 'user' not in session or session.get('user_role') != 'admin':
         return redirect(url_for('login'))
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
-    cur.execute('SELECT id, email FROM users WHERE id=?', (user_id,))
+    cur.execute('SELECT id, email, COALESCE(role, "user") FROM users WHERE id=?', (user_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
         flash('Usuario no encontrado', 'danger')
         return redirect(url_for('open_app', name='users'))
-    user = dict(id=row[0], email=row[1])
+    user = dict(id=row[0], email=row[1], role=row[2])
     cur.execute('SELECT id, name FROM projects')
     projects = [dict(id=r[0], name=r[1]) for r in cur.fetchall()]
     if request.method == 'POST':
+        role = request.form.get('role', 'user')
+        if role not in ['admin', 'user']:
+            role = 'user'
+        cur.execute('UPDATE users SET role=? WHERE id=?', (role, user_id))
         selected = request.form.getlist('projects')
         # replace mapping
         cur.execute('DELETE FROM user_allowed_projects WHERE user_id=?', (user_id,))
@@ -561,6 +620,7 @@ def edit_user_projects(user_id):
 @app.route('/logout')
 def logout():
     session.pop('user', None)
+    session.pop('user_role', None)
     flash('Sesión cerrada', 'info')
     return redirect(url_for('login'))
 
@@ -568,9 +628,27 @@ def logout():
 @app.route('/reset', methods=['GET', 'POST'])
 def reset():
     if request.method == 'POST':
-        email = request.form.get('email')
-        # In a real app, send reset email. Here we just flash.
-        flash(f'Se ha enviado un enlace de restablecimiento a {email}', 'info')
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+        if not email or not password or not confirm_password:
+            flash('Todos los campos son obligatorios', 'danger')
+            return redirect(url_for('reset'))
+        if password != confirm_password:
+            flash('Las contraseñas no coinciden', 'danger')
+            return redirect(url_for('reset'))
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute('SELECT id FROM users WHERE email=?', (email,))
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            flash('No existe un usuario con ese correo', 'danger')
+            return redirect(url_for('reset'))
+        cur.execute('UPDATE users SET password=? WHERE email=?', (generate_password_hash(password), email))
+        conn.commit()
+        conn.close()
+        flash('Contraseña restablecida correctamente. Inicie sesión con su nueva contraseña.', 'success')
         return redirect(url_for('login'))
     return render_template('reset.html')
 

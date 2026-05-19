@@ -12,10 +12,17 @@
         <h3>Restablecer contraseña</h3>
         <form method="post" action="/reset">
           <label>Correo electrónico</label>
-          <input name="email" type="email" placeholder="Correo electrónico">
-          <button class="btn-login" type="submit">Enviar enlace</button>
+          <input name="email" type="email" placeholder="Correo electrónico" required>
+
+          <label>Nueva contraseña</label>
+          <input name="password" type="password" placeholder="Nueva contraseña" required>
+
+          <label>Confirmar contraseña</label>
+          <input name="confirm_password" type="password" placeholder="Confirmar contraseña" required>
+
+          <button class="btn-login" type="submit">Restablecer contraseña</button>
         </form>
-        <p><a href="/login">Volver</a></p>
+        <p><a href="/login">Volver a iniciar sesión</a></p>
       </div>
     </div>
   </body>
