@@ -20,8 +20,10 @@
   </head>
   <body>
     <div class="topbar">
-      <div class="brand">Mi Odoo (demo)</div>
-      <div class="user">{{ user }}</div>
+      <div>
+        <div class="brand">Mi Odoo (demo)</div>
+        <div class="user">{{ user }}</div>
+      </div>
     </div>
     <div class="apps-grid">
       {% for label, key in modules %}

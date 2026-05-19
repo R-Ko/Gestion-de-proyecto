@@ -6,6 +6,13 @@
     <p>Configura los proyectos visibles para <strong>{{ user.email }}</strong>.</p>
   </div>
   <form class="form-stack" method="post">
+    <label class="field-group">
+      <span>Rol de usuario</span>
+      <select name="role">
+        <option value="user" {% if user.role == 'user' %}selected{% endif %}>Usuario</option>
+        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrador</option>
+      </select>
+    </label>
     <div class="checkbox-grid">
       {% for p in projects %}
       <label class="checkbox-item">

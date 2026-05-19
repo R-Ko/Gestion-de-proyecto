@@ -6,45 +6,51 @@
     <title>Proyectos</title>
     <link rel="stylesheet" href="/static/css/odoo_login.css">
     <style>
-      .page-header{background:linear-gradient(135deg,#111827,#172554);color:#eef2ff;padding:28px 32px;border-radius:28px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 24px 60px rgba(15,23,42,0.32);border:1px solid rgba(148,163,184,0.14)}
+      body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;color:#eef2ff}
+      .page-header{background:#111827;color:#eef2ff;padding:24px 26px;border-radius:24px;display:flex;flex-direction:column;gap:18px;box-shadow:0 26px 60px rgba(0,0,0,0.28);border:1px solid rgba(148,163,184,0.15)}
       .page-title{font-size:2rem;font-weight:800;letter-spacing:-.03em;margin:0}
-      .page-breadcrumb{font-size:13px;color:rgba(226,232,240,0.75);margin-top:6px}
+      .page-breadcrumb{font-size:13px;color:rgba(226,232,240,0.75);margin-top:4px}
       .page-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
-      .action-pill{background:rgba(255,255,255,0.05);border:1px solid rgba(148,163,184,0.16);border-radius:999px;padding:10px 16px;color:#cbd5e1;font-size:14px;text-decoration:none;transition:all .18s ease}
-      .action-pill:hover{background:rgba(56,189,248,0.12);color:#f8fafc}
-      .action-pill.active{background:rgba(56,189,248,0.18);border-color:rgba(56,189,248,0.32);color:#fff}
-      .search-box{display:flex;align-items:center;background:rgba(255,255,255,0.06);border:1px solid rgba(148,163,184,0.18);border-radius:16px;padding:10px 14px;color:#cbd5e1}
-      .search-box input{border:none;outline:none;width:180px;font-size:14px;background:transparent;color:#eef2ff}
-      .btn-create{background:linear-gradient(135deg,#38bdf8,#7c3aed);color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:700;border:none;box-shadow:0 16px 30px rgba(56,189,248,0.18)}
+      .action-pill{background:rgba(255,255,255,0.06);border:1px solid rgba(148,163,184,0.14);border-radius:999px;padding:10px 16px;color:#cbd5e1;font-size:14px;text-decoration:none;transition:all .18s ease}
+      .action-pill:hover{background:rgba(255,255,255,0.12);color:#fff}
+      .action-pill.active{background:rgba(56,189,248,0.16);border-color:rgba(56,189,248,0.28);color:#fff}
+      .search-box{display:flex;align-items:center;background:rgba(255,255,255,0.06);border:1px solid rgba(148,163,184,0.14);border-radius:18px;padding:10px 14px;color:#cbd5e1;min-width:240px;flex:1 1 220px}
+      .search-box input{border:none;outline:none;width:100%;font-size:14px;background:transparent;color:#eef2ff}
+      .btn-create{background:#2563eb;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:700;border:none;box-shadow:0 16px 30px rgba(37,99,235,0.18)}
       .btn-create:hover{transform:translateY(-1px)}
-      .projects-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;padding:22px}
-      .proj-card{background:rgba(15,23,42,0.96);border:1px solid rgba(148,163,184,0.16);padding:24px;border-radius:24px;box-shadow:0 24px 60px rgba(15,23,42,0.22);transition:transform .2s ease,box-shadow .2s ease;overflow:hidden}
-      .proj-card:hover{transform:translateY(-4px);box-shadow:0 30px 70px rgba(15,23,42,0.32)}
-      .proj-header{font-weight:700;color:#f8fafc;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
-      .proj-label{display:flex;align-items:center;gap:10px;font-size:1rem;color:#e2e8f0}
-      .proj-label span{display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:10px;background:rgba(56,189,248,0.12);color:#38bdf8;font-size:14px}
-      .proj-meta{color:#94a3b8;font-size:14px;line-height:1.8;margin-bottom:18px}
-      .proj-booster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
-      .proj-stat{display:flex;align-items:center;gap:12px;padding:16px;border-radius:18px;background:rgba(255,255,255,0.04);border:1px solid rgba(148,163,184,0.12);font-size:13px;color:#e2e8f0}
-      .proj-stat span.icon{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;border-radius:12px;background:rgba(56,189,248,0.16);color:#38bdf8;font-size:12px}
+      .projects-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px;padding:22px}
+      .proj-card{background:rgba(15,23,42,0.96);border:1px solid rgba(148,163,184,0.16);padding:24px;border-radius:24px;box-shadow:0 18px 38px rgba(0,0,0,0.18);transition:transform .18s ease,box-shadow .18s ease;display:flex;flex-direction:column;gap:18px}
+      .proj-card:hover{transform:translateY(-2px);box-shadow:0 22px 50px rgba(0,0,0,0.22)}
+      .proj-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+      .proj-info{display:flex;flex-direction:column;gap:12px}
+      .proj-title{font-weight:700;color:#fff;font-size:1.1rem;line-height:1.3}
+      .proj-meta{color:#94a3b8;font-size:14px;line-height:1.8}
+      .proj-booster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:4px}
+      .proj-stat{display:flex;align-items:center;gap:10px;padding:16px;border-radius:18px;background:rgba(255,255,255,0.04);border:1px solid rgba(148,163,184,0.12);font-size:13px;color:#e2e8f0}
+      .proj-stat span.icon{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;border-radius:12px;background:rgba(56,189,248,0.14);color:#38bdf8;font-size:12px}
       .proj-stat strong{color:#fff}
-      .projects-grid a{color:inherit;text-decoration:none}
-      .project-header-actions{display:flex;gap:8px;align-items:center}
-      .project-tag{font-size:12px;padding:6px 12px;border-radius:999px;background:rgba(56,189,248,0.12);color:#38bdf8}
+      .proj-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+      .btn-delete{background:rgba(255,255,255,0.08);border:1px solid rgba(148,163,184,0.16);color:#f8fafc;padding:10px 16px;border-radius:999px;font-size:0.9rem;cursor:pointer;transition:all .18s ease}
+      .btn-delete:hover{background:rgba(255,255,255,0.14)}
+      .project-tag{font-size:12px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,0.05);color:#cbd5e1}
+      @media (max-width:900px){.page-header{padding:20px 18px}.projects-grid{padding:18px;gap:18px}}
+      @media (max-width:640px){.page-actions{justify-content:center}.search-box{min-width:auto;flex:1 1 100%}}
     </style>
   </head>
   <body>
     <div class="page-header">
-      <div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div class="page-title">Proyecto</div>
-          <a href="{{ url_for('create_project') }}" class="btn-create">Nuevo proyecto</a>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div class="page-title">Proyectos</div>
+          <div class="page-breadcrumb">Visión general de proyectos</div>
         </div>
-        <div class="page-breadcrumb">Proyectos</div>
+        {% if session.user_role == 'admin' %}
+        <a href="{{ url_for('create_project') }}" class="btn-create">Nuevo proyecto</a>
+        {% endif %}
       </div>
       <div class="page-actions">
         <a class="action-pill" href="/dashboard">Dashboard</a>
-        <a class="action-pill{% if filter_by == 'all' %} active{% endif %}" href="/app/project?filter=all">Proyectos</a>
+        <a class="action-pill{% if filter_by == 'all' %} active{% endif %}" href="/app/project?filter=all">Todos</a>
         <a class="action-pill{% if filter_by == 'assigned' %} active{% endif %}" href="/app/project?filter=assigned">Asignados</a>
         <a class="action-pill{% if filter_by == 'hitos' %} active{% endif %}" href="/app/project?filter=hitos">Hitos</a>
         <a class="action-pill{% if filter_by == 'sprint' %} active{% endif %}" href="/app/project?filter=sprint">Sprint</a>
@@ -56,17 +62,26 @@
     </div>
     <div class="projects-grid">
       {% for p in projects %}
-      <a href="/project/{{ p.id }}" class="proj-card">
+      <div class="proj-card">
         <div class="proj-header">
-          <div class="proj-label"><span>★</span>{{ p.name }}</div>
-          <div class="project-header-actions"><span class="project-tag">Proyecto</span></div>
+          <div class="proj-info">
+            <a href="/project/{{ p.id }}" class="proj-title">{{ p.name }}</a>
+            <div class="proj-meta">Propietario: {{ p.owner }} · Asignados: {{ p.assigned }}</div>
+          </div>
+          <div class="proj-actions">
+            <span class="project-tag">Proyecto</span>
+            {% if session.user_role == 'admin' %}
+            <form method="post" action="{{ url_for('delete_project', project_id=p.id) }}" onsubmit="return confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.');">
+              <button type="submit" class="btn-delete">Eliminar</button>
+            </form>
+            {% endif %}
+          </div>
         </div>
-        <div class="proj-meta"><span>▹</span> Tipo de negocio: Nacional<br/><span>▹</span> Línea de producto: ERP_Odoo</div>
         <div class="proj-booster">
-          <div class="proj-stat"><span class="icon">🗂</span><strong>{{ p.tasks }}</strong> Tasks</div>
-          <div class="proj-stat"><span class="icon">🎫</span><strong>{{ p.tickets }}</strong> Tickets</div>
+          <div class="proj-stat"><span class="icon">📌</span><strong>{{ p.tasks }}</strong> Tareas</div>
+          <div class="proj-stat"><span class="icon">📁</span><strong>{{ p.tickets }}</strong> Tickets</div>
         </div>
-      </a>
+      </div>
       {% endfor %}
     </div>
   </body>
