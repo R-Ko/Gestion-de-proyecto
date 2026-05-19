@@ -495,45 +495,46 @@
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', function(e) {
-      const emailInput = document.getElementById('email');
-      const passwordInput = document.getElementById('password');
-      const email = emailInput ? emailInput.value.trim() : '';
-      const pwd = passwordInput ? passwordInput.value : '';
+      // Validaciones de login comentadas para permitir el envío directo al backend.
+      // const emailInput = document.getElementById('email');
+      // const passwordInput = document.getElementById('password');
+      // const email = emailInput ? emailInput.value.trim() : '';
+      // const pwd = passwordInput ? passwordInput.value : '';
 
-      // Validación de email
-      function validateEmail(emailStr) {
-        const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        return re.test(emailStr);
-      }
+      // // Validación de email
+      // function validateEmail(emailStr) {
+      //   const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      //   return re.test(emailStr);
+      // }
 
-      if (!email) {
-        e.preventDefault();
-        showFancyAlert('Por favor ingresa tu correo electrónico', 'error');
-        emailInput.focus();
-        return;
-      }
+      // if (!email) {
+      //   e.preventDefault();
+      //   showFancyAlert('Por favor ingresa tu correo electrónico', 'error');
+      //   emailInput.focus();
+      //   return;
+      // }
 
-      if (!validateEmail(email)) {
-        e.preventDefault();
-        showFancyAlert('Por favor ingresa un correo válido (ejemplo@correo.com)', 'error');
-        emailInput.focus();
-        return;
-      }
-      
-      if (!pwd) {
-        e.preventDefault();
-        showFancyAlert('Por favor ingresa tu contraseña', 'error');
-        passwordInput.focus();
-        return;
-      }
-      
-      if (pwd.length < 6) {
-        e.preventDefault();
-        showFancyAlert('La contraseña debe tener al menos 6 caracteres', 'error');
-        passwordInput.focus();
-        return;
-      }
-      // Permitir que el formulario se envíe si la validación passa
+      // if (!validateEmail(email)) {
+      //   e.preventDefault();
+      //   showFancyAlert('Por favor ingresa un correo válido (ejemplo@correo.com)', 'error');
+      //   emailInput.focus();
+      //   return;
+      // }
+      // 
+      // if (!pwd) {
+      //   e.preventDefault();
+      //   showFancyAlert('Por favor ingresa tu contraseña', 'error');
+      //   passwordInput.focus();
+      //   return;
+      // }
+      // 
+      // if (pwd.length < 6) {
+      //   e.preventDefault();
+      //   showFancyAlert('La contraseña debe tener al menos 6 caracteres', 'error');
+      //   passwordInput.focus();
+      //   return;
+      // }
+      // Permitir que el formulario se envíe si la validación pasa
     });
   }
 
