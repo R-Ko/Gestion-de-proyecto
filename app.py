@@ -209,6 +209,60 @@ def status_for_stage(stage):
 def is_admin_session():
     return session.get('user_role') == 'admin' or session.get('user') == 'admin@example.com'
 
+# Validation functions
+def validate_email(email):
+    """Validar formato de email"""
+    import re
+    if not email:
+        return False, 'Email requerido'
+    if len(email) > 255:
+        return False, 'Email muy largo'
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+        return False, 'Formato de email inválido'
+    return True, email.lower()
+
+def validate_password(password):
+    """Validar fortaleza de contraseña"""
+    if not password:
+        return False, 'Contraseña requerida'
+    if len(password) < 6:
+        return False, 'Contraseña debe tener al menos 6 caracteres'
+    return True, password
+
+def validate_project_name(name):
+    """Validar nombre de proyecto"""
+    if not name or not name.strip():
+        return False, 'Nombre de proyecto requerido'
+    if len(name.strip()) > 255:
+        return False, 'Nombre de proyecto muy largo'
+    return True, name.strip()
+
+def validate_task_title(title):
+    """Validar título de tarea"""
+    if not title or not title.strip():
+        return False, 'Título de tarea requerido'
+    if len(title.strip()) > 500:
+        return False, 'Título muy largo'
+    return True, title.strip()
+
+def validate_date_format(date_str):
+    """Validar que la fecha esté en formato ISO (YYYY-MM-DD)"""
+    if not date_str:
+        return True, ''  # Las fechas son opcionales
+    import re
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+        return False, 'Formato de fecha inválido, use YYYY-MM-DD'
+    return True, date_str
+
+def email_exists(email):
+    """Verificar si un email ya existe"""
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute('SELECT id FROM users WHERE email=?', (email,))
+    exists = cur.fetchone() is not None
+    conn.close()
+    return exists
+
 # Ensure DB initialized at import time to avoid decorator compatibility issues
 init_db()
 
@@ -230,16 +284,21 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('login')
+        email = request.form.get('email') or request.form.get('login')
         password = request.form.get('password')
-        user = get_user(email)
+        
+        if not email or not password:
+            flash('Email y contraseña requeridos', 'danger')
+            return redirect(url_for('login'))
+        
+        user = get_user(email.lower())
         if user and check_password_hash(user[2], password):
             session['user'] = user[1]
             session['user_role'] = user[3]
             flash('Inicio de sesión correcto', 'success')
             return redirect(url_for('apps'))
         else:
-            flash('Correo o contraseña incorrectos', 'danger')
+            flash('Email o contraseña incorrectos', 'danger')
             return redirect(url_for('login'))
     return render_template('login.html')
 
@@ -292,7 +351,7 @@ def open_app(name):
     if name == 'users':
         if session.get('user_role') != 'admin':
             # non-admins see placeholder
-            return render_template('app_page.html', name='users')
+            return render_template('app_page.html', name='users', user=session.get('user'))
         # admin: list users and their allowed projects
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
@@ -306,8 +365,8 @@ def open_app(name):
             cur.execute('SELECT project_id FROM user_allowed_projects WHERE user_id=?', (u['id'],))
             allowed[u['id']] = [r[0] for r in cur.fetchall()]
         conn.close()
-        return render_template('users.html', users=users, projects=projects, allowed=allowed)
-    return render_template('app_page.html', name=name)
+        return render_template('users.html', users=users, projects=projects, allowed=allowed, user=session.get('user'))
+    return render_template('app_page.html', name=name, user=session.get('user'))
 
 
 @app.route('/app/project/create', methods=['GET', 'POST'])
@@ -321,16 +380,24 @@ def create_project():
         name = request.form.get('name', '').strip()
         assigned = request.form.get('assigned_emails', '').strip()
         owner = session.get('user')
-        if not name:
-            flash('Nombre de proyecto requerido', 'danger')
+        
+        # Validación del nombre
+        valid_name, name_result = validate_project_name(name)
+        if not valid_name:
+            flash(name_result, 'danger')
             return redirect(url_for('create_project'))
+        
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
-        cur.execute('INSERT INTO projects (name, owner_email, assigned_emails, tasks_count, tickets_count) VALUES (?, ?, ?, 0, 0)',
-                    (name, owner, assigned))
-        conn.commit()
-        conn.close()
-        flash('Proyecto creado', 'success')
+        try:
+            cur.execute('INSERT INTO projects (name, owner_email, assigned_emails, tasks_count, tickets_count) VALUES (?, ?, ?, 0, 0)',
+                        (name_result, owner, assigned))
+            conn.commit()
+            flash(f'Proyecto "{name_result}" creado exitosamente', 'success')
+        except Exception as e:
+            flash(f'Error al crear proyecto: {str(e)[:100]}', 'danger')
+        finally:
+            conn.close()
         return redirect(url_for('open_app', name='project'))
     return render_template('project_create.html')
 
@@ -390,19 +457,45 @@ def create_task(project_id):
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         stage = request.form.get('stage', 'backlog')
-        assigned_email = request.form.get('assigned_email', '')
+        assigned_email = request.form.get('assigned_email', '').strip()
+        deadline = request.form.get('deadline', '').strip()
         ticket_number = request.form.get('ticket_number', '').strip() or f"{project_id}-{int(time.time())}"
-        if not title:
-            flash('Título de la tarea requerido', 'danger')
+        
+        # Validaciones
+        valid_title, title_result = validate_task_title(title)
+        if not valid_title:
+            flash(title_result, 'danger')
             conn.close()
             return redirect(url_for('create_task', project_id=project_id))
+        
+        # Validar stage
+        valid_stages = dict(STAGE_OPTIONS)
+        if stage not in valid_stages:
+            flash('Etapa inválida', 'danger')
+            conn.close()
+            return redirect(url_for('create_task', project_id=project_id))
+        
+        # Validar date format si se proporciona
+        valid_date, date_result = validate_date_format(deadline)
+        if not valid_date:
+            flash(date_result, 'danger')
+            conn.close()
+            return redirect(url_for('create_task', project_id=project_id))
+        
         status = status_for_stage(stage)
-        cur.execute('INSERT INTO tasks (project_id, title, description, assigned_email, stage, task_type, deadline, milestone, sprint, category, status, ticket_number, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,datetime("now"))',
-                    (project_id, title, request.form.get('description', '').strip(), assigned_email, stage, request.form.get('task_type', '').strip(), request.form.get('deadline', '').strip(), request.form.get('milestone', '').strip(), request.form.get('sprint', '').strip(), request.form.get('category', '').strip(), status, ticket_number))
-        cur.execute('UPDATE projects SET tasks_count = tasks_count + 1 WHERE id=?', (project_id,))
-        conn.commit()
-        conn.close()
-        flash('Tarea creada', 'success')
+        try:
+            cur.execute('INSERT INTO tasks (project_id, title, description, assigned_email, stage, task_type, deadline, milestone, sprint, category, status, ticket_number, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,datetime("now"))',
+                        (project_id, title_result, request.form.get('description', '').strip(), assigned_email, stage, 
+                         request.form.get('task_type', '').strip(), date_result, 
+                         request.form.get('milestone', '').strip(), request.form.get('sprint', '').strip(), 
+                         request.form.get('category', '').strip(), status, ticket_number))
+            cur.execute('UPDATE projects SET tasks_count = tasks_count + 1 WHERE id=?', (project_id,))
+            conn.commit()
+            flash(f'Tarea "{title_result}" creada exitosamente', 'success')
+        except Exception as e:
+            flash(f'Error al crear tarea: {str(e)[:100]}', 'danger')
+        finally:
+            conn.close()
         return redirect(url_for('project_detail', project_id=project_id))
     conn.close()
     return render_template('task_create.html', project=project, project_users=project_users, stage_options=STAGE_OPTIONS)
@@ -525,6 +618,21 @@ def task_detail(task_id):
                 'stage': task['stage'],
                 'status': status_for_stage(task['stage']),
             }
+            
+            # Validaciones
+            if not fields['title']:
+                conn.close()
+                flash('El título es requerido', 'danger')
+                return redirect(url_for('task_detail', task_id=task_id))
+            
+            # Validar fecha si se proporciona
+            if fields['deadline']:
+                valid_date, _ = validate_date_format(fields['deadline'])
+                if not valid_date:
+                    conn.close()
+                    flash('Formato de fecha inválido, use YYYY-MM-DD', 'danger')
+                    return redirect(url_for('task_detail', task_id=task_id))
+            
             notes = []
             for key, new_value in fields.items():
                 old_value = task.get(key) or ''
@@ -541,15 +649,22 @@ def task_detail(task_id):
                         'category': 'Categoría',
                     }.get(key, key)
                     notes.append(f"{field_label}: {old_value or 'vacío'} → {new_value or 'vacío'}")
+            
             if notes:
-                cur.execute('UPDATE tasks SET title=?, ticket_number=?, description=?, assigned_email=?, task_type=?, deadline=?, milestone=?, sprint=?, category=?, status=? WHERE id=?',
-                            (fields['title'], fields['ticket_number'], fields['description'], fields['assigned_email'], fields['task_type'], fields['deadline'], fields['milestone'], fields['sprint'], fields['category'], fields['status'], task_id))
-                for note in notes:
-                    cur.execute('INSERT INTO task_changes (task_id, author, note, changed_at) VALUES (?,?,?,datetime("now"))',
-                                (task_id, session.get('user'), note))
-                conn.commit()
-                conn.close()
-                return redirect(url_for('task_detail', task_id=task_id))
+                try:
+                    cur.execute('UPDATE tasks SET title=?, ticket_number=?, description=?, assigned_email=?, task_type=?, deadline=?, milestone=?, sprint=?, category=?, status=? WHERE id=?',
+                                (fields['title'], fields['ticket_number'], fields['description'], fields['assigned_email'], fields['task_type'], fields['deadline'], fields['milestone'], fields['sprint'], fields['category'], fields['status'], task_id))
+                    for note in notes:
+                        cur.execute('INSERT INTO task_changes (task_id, author, note, changed_at) VALUES (?,?,?,datetime("now"))',
+                                    (task_id, session.get('user'), note))
+                    conn.commit()
+                    flash(f'Tarea actualizada con {len(notes)} cambio(s)', 'success')
+                except Exception as e:
+                    flash(f'Error al actualizar: {str(e)[:100]}', 'danger')
+            else:
+                flash('No hay cambios para guardar', 'info')
+            conn.close()
+            return redirect(url_for('task_detail', task_id=task_id))
     conn.close()
     return render_template('task_detail.html', task=task, users=users, changes=changes, stage_options=STAGE_OPTIONS, status_options=STATUS_OPTIONS)
 
@@ -557,24 +672,42 @@ def task_detail(task_id):
 @app.route('/app/users/create', methods=['POST'])
 def create_user_route():
     if 'user' not in session or session.get('user_role') != 'admin':
+        flash('Solo administradores pueden crear usuarios', 'danger')
         return redirect(url_for('login'))
-    email = request.form.get('email')
-    password = request.form.get('password')
-    role = request.form.get('role', 'user')
+    
+    email = request.form.get('email', '').strip()
+    password = request.form.get('password', '').strip()
+    role = request.form.get('role', 'user').strip()
+    
+    # Validaciones
+    valid_email, email_result = validate_email(email)
+    if not valid_email:
+        flash(email_result, 'danger')
+        return redirect(url_for('open_app', name='users'))
+    
+    valid_pwd, pwd_result = validate_password(password)
+    if not valid_pwd:
+        flash(pwd_result, 'danger')
+        return redirect(url_for('open_app', name='users'))
+    
     if role not in ['admin', 'user']:
         role = 'user'
-    if not email or not password:
-        flash('Email y contraseña requeridos', 'danger')
+    
+    if email_exists(email_result):
+        flash('Este email ya está registrado', 'danger')
         return redirect(url_for('open_app', name='users'))
+    
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     try:
-        cur.execute('INSERT INTO users (email, password, role) VALUES (?, ?, ?)', (email, generate_password_hash(password), role))
+        cur.execute('INSERT INTO users (email, password, role) VALUES (?, ?, ?)', 
+                    (email_result, generate_password_hash(password), role))
         conn.commit()
-        flash('Usuario creado', 'success')
+        flash(f'Usuario {email_result} creado como {role}', 'success')
     except Exception as e:
-        flash(f'Error al crear usuario: {e}', 'danger')
-    conn.close()
+        flash(f'Error al crear usuario: {str(e)[:100]}', 'danger')
+    finally:
+        conn.close()
     return redirect(url_for('open_app', name='users'))
 
 
@@ -631,21 +764,36 @@ def reset():
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
         confirm_password = request.form.get('confirm_password', '').strip()
-        if not email or not password or not confirm_password:
-            flash('Todos los campos son obligatorios', 'danger')
+        
+        # Validaciones
+        valid_email, email_result = validate_email(email)
+        if not valid_email:
+            flash(email_result, 'danger')
             return redirect(url_for('reset'))
+        
+        valid_pwd, pwd_result = validate_password(password)
+        if not valid_pwd:
+            flash(pwd_result, 'danger')
+            return redirect(url_for('reset'))
+        
+        if not confirm_password:
+            flash('Confirmación de contraseña requerida', 'danger')
+            return redirect(url_for('reset'))
+        
         if password != confirm_password:
             flash('Las contraseñas no coinciden', 'danger')
             return redirect(url_for('reset'))
+        
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
-        cur.execute('SELECT id FROM users WHERE email=?', (email,))
+        cur.execute('SELECT id FROM users WHERE email=?', (email_result,))
         row = cur.fetchone()
         if not row:
             conn.close()
-            flash('No existe un usuario con ese correo', 'danger')
+            flash('No existe un usuario con ese correo electrónico', 'danger')
             return redirect(url_for('reset'))
-        cur.execute('UPDATE users SET password=? WHERE email=?', (generate_password_hash(password), email))
+        
+        cur.execute('UPDATE users SET password=? WHERE email=?', (generate_password_hash(password), email_result))
         conn.commit()
         conn.close()
         flash('Contraseña restablecida correctamente. Inicie sesión con su nueva contraseña.', 'success')

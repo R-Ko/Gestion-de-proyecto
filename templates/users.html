@@ -1,52 +1,447 @@
-{% extends "app_page.html" %}
-{% block content %}
-<section class="grid-layout">
-  <article class="card card-panel">
-    <div class="card-header">
-      <h2>Crear usuario nuevo</h2>
-      <p>Agrega usuarios y asígnales acceso a los proyectos desde aquí.</p>
-    </div>
-    <form class="form-grid" method="post" action="{{ url_for('create_user_route') }}">
-      <label class="field-group">
-        <span>Email</span>
-        <input name="email" type="email" placeholder="usuario@ejemplo.com" required>
-      </label>
-      <label class="field-group">
-        <span>Contraseña</span>
-        <input name="password" type="password" placeholder="Contraseña segura" required>
-      </label>
-      <label class="field-group">
-        <span>Rol</span>
-        <select name="role">
-          <option value="user">Usuario</option>
-          <option value="admin">Administrador</option>
-        </select>
-      </label>
-      <button class="btn btn-primary" type="submit">Crear usuario</button>
-    </form>
-  </article>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Gestión de usuarios · FutureFlow AI</title>
+  <!-- Google Fonts: Inter + Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  <article class="card card-panel">
+    body {
+      font-family: 'Inter', 'Poppins', sans-serif;
+      background: #07060b;
+      min-height: 100vh;
+      padding: 2rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Fondo futurista con glows */
+    .bg-glow-users {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .bg-glow-users::before {
+      content: "";
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(128, 0, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      top: -20%;
+      left: -15%;
+      filter: blur(100px);
+    }
+    .bg-glow-users::after {
+      content: "";
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(255, 80, 200, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+      bottom: -15%;
+      right: -10%;
+      filter: blur(90px);
+    }
+
+    /* Contenedor principal grid */
+    .grid-layout {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 2rem;
+      align-items: start;
+    }
+
+    /* Paneles glassmorphism */
+    .glass-panel {
+      background: rgba(18, 18, 28, 0.75);
+      backdrop-filter: blur(16px);
+      border-radius: 2rem;
+      border: 1px solid rgba(128, 90, 213, 0.4);
+      box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(168, 85, 247, 0.25);
+      overflow: hidden;
+      transition: transform 0.2s ease;
+      height: fit-content;
+    }
+
+    .card-header {
+      padding: 1.5rem 1.8rem 0.8rem 1.8rem;
+      border-bottom: 1px solid rgba(156, 110, 240, 0.2);
+    }
+    .card-header h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #FFFFFF, #d9bcff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-header p {
+      color: #a79ac9;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Formulario */
+    .form-grid {
+      padding: 1.5rem 1.8rem 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.3rem;
+    }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .field-group span {
+      font-weight: 600;
+      color: #cfc9f0;
+      font-size: 0.85rem;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .field-group span i {
+      color: #c084fc;
+      font-size: 0.9rem;
+    }
+    .glass-input, .glass-select {
+      background: rgba(25, 22, 40, 0.85);
+      border: 1px solid rgba(156, 110, 240, 0.5);
+      border-radius: 1.2rem;
+      padding: 0.8rem 1.2rem;
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      color: #f0ecff;
+      transition: all 0.25s ease;
+      outline: none;
+      width: 100%;
+    }
+    .glass-select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c084fc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+    }
+    .glass-input:focus, .glass-select:focus {
+      border-color: #c084fc;
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+    }
+    .glass-input::placeholder {
+      color: #6b6292;
+    }
+    .btn-primary {
+      background: linear-gradient(105deg, #b63aff, #a540f0, #dd6eff);
+      border: none;
+      padding: 0.85rem;
+      border-radius: 1.5rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 6px 18px rgba(139, 69, 211, 0.4);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(105deg, #c44eff, #b345f0, #ed7bff);
+      box-shadow: 0 12px 28px rgba(156, 70, 250, 0.6);
+    }
+
+    /* Tabla */
+    .table-responsive {
+      overflow-x: auto;
+      padding: 0 0 1rem 0;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th, .data-table td {
+      padding: 0.9rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(156, 110, 240, 0.2);
+    }
+    .data-table th {
+      font-weight: 600;
+      color: #bfb2f0;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .data-table td {
+      color: #e2d6ff;
+      font-size: 0.85rem;
+    }
+    .btn-small {
+      background: rgba(45, 38, 80, 0.7);
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #cfc2f7;
+      text-decoration: none;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-small:hover {
+      background: #7a4fcf40;
+      border-color: #c084fc;
+      color: white;
+    }
+
+    /* Scroll */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1b1733;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a855f7;
+      border-radius: 10px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      body {
+        padding: 1rem;
+      }
+      .grid-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Toast */
+    .custom-toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #2a2352, #181430);
+      backdrop-filter: blur(20px);
+      border: 1px solid #b77eff;
+      border-radius: 60px;
+      padding: 12px 28px;
+      color: #efeaff;
+      font-weight: 500;
+      font-size: 0.85rem;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeSlideUp 0.25s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes fadeSlideUp {
+      0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0px); }
+    }
+
+    /* Badge rol */
+    .role-badge {
+      background: rgba(139, 92, 246, 0.3);
+      padding: 0.2rem 0.6rem;
+      border-radius: 2rem;
+      font-size: 0.7rem;
+      display: inline-block;
+    }
+    .role-admin {
+      background: rgba(219, 112, 255, 0.3);
+      color: #e9b5ff;
+    }
+  </style>
+</head>
+<body>
+<div class="bg-glow-users"></div>
+<div class="grid-layout">
+  <!-- Panel izquierdo: crear usuario -->
+  <div class="glass-panel">
     <div class="card-header">
-      <h2>Usuarios registrados</h2>
-      <p>Selecciona un usuario para configurar los proyectos que puede ver.</p>
+      <h2><i class="fas fa-user-plus"></i> Crear usuario nuevo</h2>
+      <p><i class="fas fa-robot"></i> Agrega usuarios y asígnales acceso a los proyectos desde aquí.</p>
     </div>
-    <div class="table-responsive scrollable">
+    <form class="form-grid" method="post" action="{{ url_for('create_user_route') }}" id="createUserForm">
+      <div class="field-group">
+        <span><i class="fas fa-envelope"></i> Email</span>
+        <input class="glass-input" name="email" type="email" placeholder="usuario@ejemplo.com" required id="userEmail">
+      </div>
+      <div class="field-group">
+        <span><i class="fas fa-lock"></i> Contraseña</span>
+        <input class="glass-input" name="password" type="password" placeholder="Contraseña segura" required id="userPassword">
+        <small style="color:#8f85b5;"><i class="fas fa-info-circle"></i> Mínimo 6 caracteres</small>
+      </div>
+      <div class="field-group">
+        <span><i class="fas fa-user-tag"></i> Rol</span>
+        <select name="role" class="glass-select" id="userRole">
+          <option value="user">👤 Usuario estándar</option>
+          <option value="admin">👑 Administrador</option>
+        </select>
+      </div>
+      <button class="btn-primary" type="submit"><i class="fas fa-save"></i> Crear usuario</button>
+    </form>
+  </div>
+
+  <!-- Panel derecho: lista de usuarios -->
+  <div class="glass-panel">
+    <div class="card-header">
+      <h2><i class="fas fa-users"></i> Usuarios registrados</h2>
+      <p><i class="fas fa-shield-alt"></i> Selecciona un usuario para configurar los proyectos que puede ver.</p>
+    </div>
+    <div class="table-responsive">
       <table class="data-table">
         <thead>
-          <tr><th>Email</th><th>Rol</th><th>Acción</th></tr>
+          <tr>
+            <th><i class="fas fa-envelope"></i> Email</th>
+            <th><i class="fas fa-user-tag"></i> Rol</th>
+            <th><i class="fas fa-cog"></i> Acción</th>
+          </tr>
         </thead>
         <tbody>
           {% for u in users %}
           <tr>
-            <td>{{ u.email }}</td>
-            <td>{{ u.role|capitalize }}</td>
-            <td><a class="btn btn-small" href="{{ url_for('edit_user_projects', user_id=u.id) }}">Configurar proyectos</a></td>
+            <td><i class="fas fa-user-circle" style="color:#c084fc; margin-right:6px;"></i> {{ u.email }}</td>
+            <td>
+              {% if u.role == 'admin' %}
+              <span class="role-badge role-admin"><i class="fas fa-crown"></i> Administrador</span>
+              {% else %}
+              <span class="role-badge"><i class="fas fa-user"></i> Usuario</span>
+              {% endif %}
+            </td>
+            <td><a class="btn-small" href="{{ url_for('edit_user_projects', user_id=u.id) }}"><i class="fas fa-lock-open"></i> Configurar proyectos</a></td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="3" style="text-align:center; color:#8f85b5;">No hay usuarios registrados aún</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </article>
-</section>
-{% endblock %}
+  </div>
+</div>
+
+<script>
+  (function() {
+    const createForm = document.getElementById('createUserForm');
+    
+    // Función para mostrar toast
+    function showToast(message, type = 'info') {
+      const existing = document.querySelector('.custom-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'custom-toast';
+      let icon = '<i class="fas fa-magic"></i>';
+      if (type === 'success') icon = '<i class="fas fa-check-circle"></i>';
+      if (type === 'error') icon = '<i class="fas fa-exclamation-triangle"></i>';
+      toast.innerHTML = `${icon} ${message}`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2800);
+    }
+
+    // Validación de email
+    function validateEmail(email) {
+      const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      return re.test(email);
+    }
+
+    // Validación del formulario
+    createForm.addEventListener('submit', (e) => {
+      const email = document.getElementById('userEmail').value.trim();
+      const password = document.getElementById('userPassword').value.trim();
+      const role = document.getElementById('userRole').value;
+
+      // Validación cliente (no previene envío si backend también valida)
+      if (!email) {
+        e.preventDefault();
+        showToast('❌ El email es obligatorio', 'error');
+        document.getElementById('userEmail').focus();
+        return;
+      }
+      
+      if (!validateEmail(email)) {
+        e.preventDefault();
+        showToast('⚠️ Introduce un email válido', 'error');
+        document.getElementById('userEmail').focus();
+        return;
+      }
+      
+      if (!password) {
+        e.preventDefault();
+        showToast('❌ La contraseña es obligatoria', 'error');
+        document.getElementById('userPassword').focus();
+        return;
+      }
+      
+      if (password.length < 6) {
+        e.preventDefault();
+        showToast('🔒 La contraseña debe tener al menos 6 caracteres', 'error');
+        document.getElementById('userPassword').focus();
+        return;
+      }
+      
+      // Dejar que el formulario se envíe normalmente si todo es válido
+      // El backend hará la validación final
+    });
+
+    // Añadir efecto focus a campos
+    const inputs = document.querySelectorAll('.glass-input, .glass-select');
+    inputs.forEach(input => {
+      input.addEventListener('focus', () => {
+        input.style.borderColor = '#d48cff';
+      });
+      input.addEventListener('blur', () => {
+        input.style.borderColor = '';
+      });
+    });
+  })();
+</script>
+
+<!-- Estilos adicionales para mejorar tabla -->
+<style>
+  .data-table tr:hover td {
+    background: rgba(139, 92, 246, 0.1);
+  }
+  .btn-small i {
+    font-size: 0.7rem;
+  }
+  .role-badge i {
+    margin-right: 4px;
+  }
+</style>
+</body>
+</html>

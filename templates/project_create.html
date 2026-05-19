@@ -1,24 +1,503 @@
-{% extends "app_page.html" %}
-{% block content %}
-<section class="card card-panel">
-  <div class="card-header">
-    <h2>Crear nuevo proyecto</h2>
-    <p>Define el nombre y los usuarios asignados para comenzar a gestionar el proyecto.</p>
-  </div>
-  <form class="form-grid" method="post" action="{{ url_for('create_project') }}">
-    <label class="field-group">
-      <span>Nombre del proyecto</span>
-      <input name="name" type="text" placeholder="Ej. Migración ERP" required>
-    </label>
-    <label class="field-group">
-      <span>Usuarios asignados</span>
-      <input name="assigned_emails" type="text" placeholder="user1@example.com,user2@example.com">
-      <small>Separe los correos con comas.</small>
-    </label>
-    <div class="form-footer">
-      <button class="btn btn-primary" type="submit">Crear proyecto</button>
-      <a class="btn btn-link" href="{{ url_for('open_app', name='project') }}">Volver a proyectos</a>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Crear nuevo proyecto · FutureFlow AI</title>
+  <!-- Google Fonts: Inter + Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'Poppins', sans-serif;
+      background: #07060b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Fondo futurista con glows (misma línea que dashboard) */
+    .bg-glow-create {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .bg-glow-create::before {
+      content: "";
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(128, 0, 255, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+      top: -20%;
+      left: -15%;
+      filter: blur(100px);
+    }
+    .bg-glow-create::after {
+      content: "";
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(255, 80, 200, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      bottom: -15%;
+      right: -10%;
+      filter: blur(90px);
+    }
+
+    /* Contenedor principal con glassmorphism premium */
+    .create-container {
+      max-width: 680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .glass-panel {
+      background: rgba(18, 18, 28, 0.75);
+      backdrop-filter: blur(16px);
+      border-radius: 2rem;
+      border: 1px solid rgba(128, 90, 213, 0.4);
+      box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(168, 85, 247, 0.25);
+      overflow: hidden;
+      transition: transform 0.2s ease;
+    }
+
+    /* header del panel */
+    .panel-header {
+      padding: 1.8rem 2rem 1rem 2rem;
+      border-bottom: 1px solid rgba(156, 110, 240, 0.2);
+    }
+    .panel-header h2 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #FFFFFF, #d9bcff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.3px;
+      margin-bottom: 0.5rem;
+    }
+    .panel-header p {
+      color: #a79ac9;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* form grid */
+    .form-grid {
+      padding: 1.8rem 2rem 2rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .field-group span {
+      font-weight: 600;
+      color: #cfc9f0;
+      font-size: 0.9rem;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .field-group span i {
+      color: #c084fc;
+      font-size: 1rem;
+    }
+    .glass-input {
+      background: rgba(25, 22, 40, 0.85);
+      border: 1px solid rgba(156, 110, 240, 0.5);
+      border-radius: 1.2rem;
+      padding: 0.9rem 1.2rem;
+      font-size: 1rem;
+      font-family: 'Inter', sans-serif;
+      color: #f0ecff;
+      transition: all 0.25s ease;
+      outline: none;
+      width: 100%;
+    }
+    .glass-input:focus {
+      border-color: #c084fc;
+      background: rgba(30, 26, 55, 0.95);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+    }
+    .glass-input::placeholder {
+      color: #6b6292;
+      font-weight: 400;
+    }
+    small {
+      font-size: 0.7rem;
+      color: #8f85b5;
+      margin-top: 4px;
+    }
+
+    /* usuarios asignados: área de tags visuales (bonus) */
+    .emails-tag-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    .email-tag {
+      background: rgba(139, 92, 246, 0.3);
+      border-radius: 40px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #e0ceff;
+    }
+    .email-tag i {
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .email-tag i:hover {
+      color: #ff99cc;
+    }
+
+    /* botones y footer */
+    .form-footer {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .btn-primary {
+      background: linear-gradient(105deg, #b63aff, #a540f0, #dd6eff);
+      border: none;
+      padding: 0.85rem 1.8rem;
+      border-radius: 2rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 6px 18px rgba(139, 69, 211, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(105deg, #c44eff, #b345f0, #ed7bff);
+      box-shadow: 0 12px 28px rgba(156, 70, 250, 0.6);
+    }
+    .btn-secondary {
+      background: rgba(45, 38, 80, 0.7);
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      border-radius: 2rem;
+      padding: 0.85rem 1.6rem;
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: #ddd0ff;
+      text-decoration: none;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-secondary:hover {
+      background: #7a4fcf40;
+      border-color: #c084fc;
+      color: white;
+    }
+    .btn-link {
+      background: transparent;
+      border: none;
+      color: #c7b0ff;
+      font-weight: 500;
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+    .btn-link:hover {
+      color: #e8d5ff;
+      text-decoration: underline;
+    }
+
+    /* responsive */
+    @media (max-width: 550px) {
+      body {
+        padding: 1rem;
+      }
+      .panel-header, .form-grid {
+        padding: 1.2rem;
+      }
+      .form-footer {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .btn-primary, .btn-secondary {
+        justify-content: center;
+      }
+    }
+
+    /* toast personalizado */
+    .custom-toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #2a2352, #181430);
+      backdrop-filter: blur(20px);
+      border: 1px solid #b77eff;
+      border-radius: 60px;
+      padding: 12px 28px;
+      color: #efeaff;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 0.85rem;
+      z-index: 10000;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.2px;
+      pointer-events: none;
+      animation: fadeSlideUp 0.25s ease-out forwards;
+    }
+    @keyframes fadeSlideUp {
+      0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0px); }
+    }
+  </style>
+</head>
+<body>
+<div class="bg-glow-create"></div>
+<div class="create-container">
+  <div class="glass-panel">
+    <div class="panel-header">
+      <h2><i class="fas fa-plus-circle" style="margin-right: 10px;"></i> Crear nuevo proyecto</h2>
+      <p><i class="fas fa-robot" style="color:#b87eff;"></i> Define el nombre y los usuarios asignados para comenzar a gestionar el proyecto con IA.</p>
     </div>
-  </form>
-</section>
-{% endblock %}
+
+    <form class="form-grid" method="post" action="#" id="createProjectForm">
+      <!-- Nombre del proyecto -->
+      <div class="field-group">
+        <span><i class="fas fa-folder-tree"></i> Nombre del proyecto</span>
+        <input class="glass-input" name="name" type="text" placeholder="Ej. Migración ERP, AI Analytics Suite..." id="projectName" required>
+      </div>
+
+      <!-- Usuarios asignados (emails separados por comas) con visual tags -->
+      <div class="field-group">
+        <span><i class="fas fa-envelope"></i> Usuarios asignados</span>
+        <input class="glass-input" name="assigned_emails" type="text" id="assignedEmailsInput" placeholder="user1@example.com, user2@example.com">
+        <small><i class="fas fa-info-circle"></i> Separe los correos con comas. Puedes añadir tantos como necesites.</small>
+        <div class="emails-tag-area" id="emailTagsContainer"></div>
+      </div>
+
+      <div class="form-footer">
+        <button class="btn-primary" type="submit"><i class="fas fa-rocket"></i> Crear proyecto</button>
+        <a class="btn-secondary" href="/app/project" id="backToProjectsBtn"><i class="fas fa-arrow-left"></i> Volver a proyectos</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Elementos DOM
+  const emailInput = document.getElementById('assignedEmailsInput');
+  const tagsContainer = document.getElementById('emailTagsContainer');
+  const projectNameInput = document.getElementById('projectName');
+  const createForm = document.getElementById('createProjectForm');
+
+  // Array para almacenar emails válidos
+  let emailList = [];
+
+  // Función para parsear emails desde string (separados por coma)
+  function parseEmailsFromString(str) {
+    if (!str.trim()) return [];
+    // separar por comas, limpiar espacios y filtrar vacíos
+    return str.split(',').map(email => email.trim()).filter(email => email !== "");
+  }
+
+  // Renderizar tags visuales
+  function renderEmailTags() {
+    tagsContainer.innerHTML = '';
+    if (emailList.length === 0) {
+      tagsContainer.innerHTML = '<span style="font-size:0.7rem; color:#6a608a;"><i class="fas fa-plus-circle"></i> Añade correos arriba</span>';
+      return;
+    }
+    emailList.forEach((email, idx) => {
+      const tag = document.createElement('div');
+      tag.className = 'email-tag';
+      tag.innerHTML = `${escapeHtml(email)} <i class="fas fa-times-circle" data-email="${escapeHtml(email)}" style="cursor:pointer;"></i>`;
+      tagsContainer.appendChild(tag);
+    });
+    // añadir eventos de eliminación a cada icono
+    document.querySelectorAll('.email-tag i').forEach(icon => {
+      icon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const emailToRemove = icon.getAttribute('data-email');
+        if (emailToRemove) {
+          emailList = emailList.filter(em => em !== emailToRemove);
+          updateInputFromList();
+          renderEmailTags();
+          showToast(`📧 ${emailToRemove} removido`, 'info');
+        }
+      });
+    });
+  }
+
+  // Actualizar campo input según emailList
+  function updateInputFromList() {
+    emailInput.value = emailList.join(', ');
+  }
+
+  // Sincronizar cuando el usuario escribe en el input (cambios manuales)
+  function syncFromInput() {
+    const rawValue = emailInput.value;
+    const newEmails = parseEmailsFromString(rawValue);
+    // limpiar duplicados (opcional)
+    const unique = [...new Map(newEmails.map(em => [em.toLowerCase(), em])).values()];
+    emailList = unique;
+    renderEmailTags();
+  }
+
+  // Manejar evento input: mantener consistencia
+  emailInput.addEventListener('input', () => {
+    syncFromInput();
+  });
+
+  // Prevenir duplicados y validación simple
+  function validateForm() {
+    const projectName = projectNameInput.value.trim();
+    if (!projectName) {
+      showToast('❌ El nombre del proyecto es obligatorio', 'error');
+      return false;
+    }
+    if (projectName.length < 3) {
+      showToast('⚠️ El nombre debe tener al menos 3 caracteres', 'error');
+      return false;
+    }
+    // validar emails (formato básico)
+    let invalidEmails = [];
+    emailList.forEach(email => {
+      if (!email.includes('@') || !email.includes('.')) {
+        invalidEmails.push(email);
+      }
+    });
+    if (invalidEmails.length > 0) {
+      showToast(`Correo(s) inválido(s): ${invalidEmails.slice(0,2).join(', ')}`, 'error');
+      return false;
+    }
+    return true;
+  }
+
+  // Función para enviar formulario real
+  createForm.addEventListener('submit', (e) => {
+    if (!validateForm()) {
+      e.preventDefault();
+      return;
+    }
+    // Si la validación pasa, permitir que el formulario se envíe normalmente
+  });
+
+  // Función para mostrar notificaciones premium
+  function showToast(message, type = 'info') {
+    const existing = document.querySelector('.custom-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'custom-toast';
+    let iconHtml = '<i class="fas fa-magic"></i>';
+    if (type === 'success') iconHtml = '<i class="fas fa-check-circle"></i>';
+    if (type === 'error') iconHtml = '<i class="fas fa-exclamation-triangle"></i>';
+    toast.innerHTML = `${iconHtml} ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 2800);
+  }
+
+  // Botón volver a proyectos (simula navegación)
+  const backBtn = document.getElementById('backToProjectsBtn');
+  if (backBtn) {
+    backBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showToast('↩️ Redirigiendo a la lista de proyectos', 'info');
+      setTimeout(() => {
+        window.location.href = "/app/project";
+      }, 500);
+    });
+  }
+
+  // Inicializar render tags con valores por defecto (opcional)
+  function initExampleDemo() {
+    // Para demostración visual, mostramos ejemplo de llenado rápido (sin autollenado invasivo)
+    // pero queda limpio para UX: solo si está vacío y se quiere sugerir, pero mejor no.
+    emailList = [];
+    renderEmailTags();
+  }
+  initExampleDemo();
+
+  // Helper de escape
+  function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  // Pequeño efecto de foco
+  const allInputs = document.querySelectorAll('.glass-input');
+  allInputs.forEach(input => {
+    input.addEventListener('focus', () => {
+      input.parentElement?.classList.add('focused');
+    });
+    input.addEventListener('blur', () => {
+      input.parentElement?.classList.remove('focused');
+    });
+  });
+</script>
+
+<!-- Estilos adicionales para mejorar la interacción -->
+<style>
+  .field-group .glass-input:focus {
+    border-color: #d48cff;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.4);
+  }
+  .email-tag i {
+    transition: transform 0.1s;
+  }
+  .email-tag i:hover {
+    transform: scale(1.15);
+    color: #ffadf0;
+  }
+  button, a {
+    cursor: pointer;
+  }
+  .btn-primary i, .btn-secondary i {
+    font-size: 0.9rem;
+  }
+</style>
+</body>
+</html>

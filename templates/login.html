@@ -433,7 +433,7 @@
         Don't have an account? <a href="#" id="signupLink">Start free trial</a>
       </div>
 
-      <form method="post" action="#" id="loginForm">
+      <form method="post" action="/login" id="loginForm">
         <!-- Email field -->
         <div class="input-group-custom">
           <label class="input-label"><i class="fas fa-envelope" style="margin-right: 6px; font-size: 0.8rem;"></i> Email address</label>
@@ -456,7 +456,7 @@
           <label class="checkbox-custom">
             <input type="checkbox" id="rememberCheckbox"> Remember me
           </label>
-          <a href="#" class="forgot-link" id="forgotPwLink">Forgot password?</a>
+          <a href="/reset" class="forgot-link" id="forgotPwLink">Forgot password?</a>
         </div>
 
         <!-- Gradient button with icon -->
@@ -492,40 +492,52 @@
     });
   }
 
-  // Prevent default form submit to show modern interactive feedback (since no backend)
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', function(e) {
-      e.preventDefault();
       const emailInput = document.getElementById('email');
       const passwordInput = document.getElementById('password');
       const email = emailInput ? emailInput.value.trim() : '';
       const pwd = passwordInput ? passwordInput.value : '';
 
+      // Validación de email
+      function validateEmail(emailStr) {
+        const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return re.test(emailStr);
+      }
+
       if (!email) {
-        showFancyAlert('Please enter your email address', 'info');
+        e.preventDefault();
+        showFancyAlert('Por favor ingresa tu correo electrónico', 'error');
         emailInput.focus();
         return;
       }
+
+      if (!validateEmail(email)) {
+        e.preventDefault();
+        showFancyAlert('Por favor ingresa un correo válido (ejemplo@correo.com)', 'error');
+        emailInput.focus();
+        return;
+      }
+      
       if (!pwd) {
-        showFancyAlert('Please enter your password', 'info');
+        e.preventDefault();
+        showFancyAlert('Por favor ingresa tu contraseña', 'error');
         passwordInput.focus();
         return;
       }
-      // simple validation demo: just show success (simulate modern login)
-      showFancyAlert(`✨ Welcome back! (demo login as ${email})`, 'success');
-      // In a real world, you'd redirect or call API
+      
+      if (pwd.length < 6) {
+        e.preventDefault();
+        showFancyAlert('La contraseña debe tener al menos 6 caracteres', 'error');
+        passwordInput.focus();
+        return;
+      }
+      // Permitir que el formulario se envíe si la validación passa
     });
   }
 
-  // Forgot password & signup demo links (just nice alerts)
-  const forgotLink = document.getElementById('forgotPwLink');
-  if (forgotLink) {
-    forgotLink.addEventListener('click', function(e) {
-      e.preventDefault();
-      showFancyAlert('🔐 Password reset link would be sent to your email (demo flow)', 'info');
-    });
-  }
+  // Forgot password link now navigates to the real reset page
   const signupLink = document.getElementById('signupLink');
   if (signupLink) {
     signupLink.addEventListener('click', function(e) {
