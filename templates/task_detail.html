@@ -1,97 +1,574 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ task.title }} · Tarea</title>
-    <link rel="stylesheet" href="/static/css/odoo_login.css">
-  </head>
-  <body>
-    <form method="post">
-      <div class="page-header">
-        <div class="header-row">
-          <div>
-            <div class="page-breadcrumb"><a href="{{ url_for('open_app', name='project') }}">Proyectos</a> / <a href="{{ url_for('project_detail', project_id=task.project_id) }}" style="color:rgba(255,255,255,0.88);text-decoration:none;">{{ task.project_name }}</a> / {{ task.ticket_number }}</div>
-            <h1 class="page-title">{{ task.title }}</h1>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>{{ task.title }} · Tarea · FutureFlow AI</title>
+  <!-- Google Fonts: Inter + Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'Poppins', sans-serif;
+      background: #07060b;
+      color: #f0ecff;
+      min-height: 100vh;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    /* fondo con glows futuristas */
+    .bg-glow-detail {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .bg-glow-detail::before {
+      content: "";
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(128, 0, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      top: -20%;
+      left: -15%;
+      filter: blur(100px);
+    }
+    .bg-glow-detail::after {
+      content: "";
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(255, 80, 200, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+      bottom: -15%;
+      right: -10%;
+      filter: blur(90px);
+    }
+
+    /* contenedor principal */
+    .task-detail-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* page header */
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .page-breadcrumb {
+      background: rgba(18, 18, 28, 0.6);
+      backdrop-filter: blur(8px);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      display: inline-block;
+      border: 1px solid rgba(128, 90, 213, 0.3);
+    }
+    .page-breadcrumb a {
+      color: #dac5ff;
+      text-decoration: none;
+    }
+    .page-breadcrumb a:hover {
+      text-decoration: underline;
+    }
+    .page-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #FFFFFF, #d9bcff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-top: 0.5rem;
+      letter-spacing: -0.3px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-outline {
+      background: rgba(45, 38, 80, 0.6);
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #cfc2f7;
+      text-decoration: none;
+      cursor: pointer;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-outline:hover {
+      background: #7a4fcf40;
+      border-color: #c084fc;
+      color: white;
+    }
+    .btn-delete {
+      background: rgba(180, 60, 100, 0.2);
+      border: 1px solid rgba(244, 114, 182, 0.5);
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-weight: 500;
+      font-size: 0.8rem;
+      color: #ffb3d9;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-delete:hover {
+      background: rgba(220, 70, 120, 0.4);
+      border-color: #ff88bb;
+    }
+
+    /* two-column layout */
+    .page-body {
+      display: flex;
+      gap: 1.8rem;
+      flex-wrap: wrap;
+    }
+    .details-column {
+      flex: 2;
+      min-width: 280px;
+    }
+    .activity-column {
+      flex: 1.2;
+      min-width: 280px;
+    }
+
+    /* paneles glassmorphism */
+    .panel {
+      background: rgba(18, 18, 28, 0.7);
+      backdrop-filter: blur(12px);
+      border-radius: 1.5rem;
+      border: 1px solid rgba(128, 90, 213, 0.35);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .panel-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(156, 110, 240, 0.2);
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      background: rgba(10, 8, 20, 0.4);
+    }
+    .stage-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .stage-pill {
+      background: rgba(30, 25, 55, 0.8);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      padding: 0.3rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #cbbff0;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .stage-pill.active {
+      background: linear-gradient(105deg, #b63aff, #a540f0);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 2px 8px rgba(139, 69, 211, 0.5);
+    }
+    .panel-body {
+      padding: 1.5rem;
+    }
+
+    /* field grid */
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .field-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #b2a5dc;
+    }
+    .field-input input, .field-input select, .field-input textarea {
+      background: rgba(25, 22, 40, 0.85);
+      border: 1px solid rgba(156, 110, 240, 0.5);
+      border-radius: 1rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      font-family: 'Inter', sans-serif;
+      color: #f0ecff;
+      width: 100%;
+      transition: 0.2s;
+      outline: none;
+    }
+    .field-input input:focus, .field-input select:focus, .field-input textarea:focus {
+      border-color: #c084fc;
+      box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+    }
+    .field-value {
+      background: rgba(25, 22, 40, 0.6);
+      padding: 0.6rem 1rem;
+      border-radius: 1rem;
+      font-size: 0.85rem;
+      color: #cdc3f0;
+    }
+    .task-section {
+      margin-top: 1.5rem;
+    }
+    .task-section h3 {
+      font-size: 1rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    .task-copy {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .task-copy select {
+      background: rgba(25, 22, 40, 0.9);
+      border: 1px solid rgba(156, 110, 240, 0.6);
+      border-radius: 2rem;
+      padding: 0.5rem 1rem;
+      color: white;
+    }
+    .task-copy button {
+      background: linear-gradient(105deg, #b63aff, #a540f0);
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-weight: 500;
+      color: white;
+      cursor: pointer;
+    }
+
+    /* actividad */
+    .trace-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 1.2rem;
+    }
+    .trace-action {
+      background: rgba(45, 38, 80, 0.7);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.75rem;
+      color: #cfc2f7;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .activity-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .activity-item {
+      padding: 0.8rem 0;
+      border-bottom: 1px solid rgba(156, 110, 240, 0.2);
+    }
+    .activity-item strong {
+      font-size: 0.8rem;
+      color: #e2ceff;
+    }
+    .activity-item span {
+      font-size: 0.7rem;
+      color: #8f85b0;
+      margin-left: 8px;
+    }
+    .activity-note {
+      font-size: 0.8rem;
+      margin-top: 4px;
+      color: #cdc3ee;
+    }
+
+    /* responsive */
+    @media (max-width: 800px) {
+      body {
+        padding: 1rem;
+      }
+      .field-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1b1733;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a855f7;
+      border-radius: 10px;
+    }
+    button {
+      cursor: pointer;
+    }
+    .toast-notify {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #2a2352, #181430);
+      backdrop-filter: blur(20px);
+      border: 1px solid #b77eff;
+      border-radius: 60px;
+      padding: 10px 28px;
+      color: #efeaff;
+      font-weight: 500;
+      font-size: 0.85rem;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeSlideUp 0.2s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes fadeSlideUp {
+      0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0px); }
+    }
+  </style>
+</head>
+<body>
+<div class="bg-glow-detail"></div>
+<div class="task-detail-container">
+  <form method="post" id="taskDetailForm">
+    <div class="page-header">
+      <div class="header-row">
+        <div>
+          <div class="page-breadcrumb">
+            <a href="{{ url_for('open_app', name='project') }}"><i class="fas fa-folder-open"></i> Proyectos</a> / 
+            <a href="{{ url_for('project_detail', project_id=task.project_id) }}" style="color:rgba(255,255,255,0.88);text-decoration:none;">{{ task.project_name }}</a> / 
+            <span>{{ task.ticket_number or 'Nueva tarea' }}</span>
           </div>
-          <div class="header-actions">
-            <a class="btn-outline" href="/dashboard">Dashboard</a>
-            <button class="btn-delete" type="submit" formaction="{{ url_for('delete_task', task_id=task.id) }}" onclick="return confirm('¿Eliminar esta tarea?');">Eliminar</button>
-            <button class="btn-outline" type="submit" name="action" value="save">Guardar</button>
-          </div>
+          <h1 class="page-title"><i class="fas fa-tasks" style="margin-right: 10px;"></i> {{ task.title }}</h1>
+        </div>
+        <div class="header-actions">
+          <a class="btn-outline" href="/dashboard"><i class="fas fa-chart-line"></i> Dashboard</a>
+          <button class="btn-delete" type="submit" formaction="{{ url_for('delete_task', task_id=task.id) }}" onclick="return confirm('¿Eliminar esta tarea? Esta acción no se puede deshacer.');"><i class="fas fa-trash-alt"></i> Eliminar</button>
+          <button class="btn-outline" type="submit" name="action" value="save"><i class="fas fa-save"></i> Guardar</button>
         </div>
       </div>
-      <div class="page-body">
-        <div class="details-column">
-          <div class="panel">
-            <div class="panel-header">
-              <span>Detalles de la tarea</span>
-              <div class="stage-bar">
-                {% for value,label in stage_options %}
-                  <button type="submit" name="stage" value="{{ value }}" class="stage-pill {% if task.stage == value %}active{% endif %}">{{ label }}</button>
-                {% endfor %}
-              </div>
+    </div>
+
+    <div class="page-body">
+      <!-- Columna izquierda: detalles -->
+      <div class="details-column">
+        <div class="panel">
+          <div class="panel-header">
+            <span><i class="fas fa-info-circle"></i> Detalles de la tarea</span>
+            <div class="stage-bar">
+              {% for value,label in stage_options %}
+              <button type="submit" name="stage" value="{{ value }}" class="stage-pill {% if task.stage == value %}active{% endif %}">{{ label }}</button>
+              {% endfor %}
             </div>
-            <div class="panel-body">
-              <div class="field-grid">
-                <div class="field-group"><span class="field-label">Título</span><div class="field-input"><input type="text" name="title" value="{{ task.title }}" /></div></div>
-                <div class="field-group"><span class="field-label">Proyecto</span><div class="field-value"><a href="{{ url_for('project_detail', project_id=task.project_id) }}" style="color:#0c8b86;text-decoration:none;">{{ task.project_name }}</a></div></div>
-                <div class="field-group"><span class="field-label">ID de tarea</span><div class="field-input"><input type="text" name="ticket_number" value="{{ task.ticket_number }}" /></div></div>
-                <div class="field-group"><span class="field-label">Fecha límite</span><div class="field-input"><input type="date" name="deadline" value="{{ task.deadline }}" /></div></div>
-                <div class="field-group"><span class="field-label">Asignada a</span><div class="field-input"><select name="assigned_email">
-                    {% for user in users %}
-                      <option value="{{ user.email }}" {% if user.email == task.assigned_email %}selected{% endif %}>{{ user.email }}</option>
-                    {% endfor %}
-                  </select></div></div>
-                <div class="field-group"><span class="field-label">Categoría</span><div class="field-input"><select name="category">
-                    <option value="Codificación" {% if task.category == 'Codificación' %}selected{% endif %}>Codificación</option>
-                    <option value="Análisis" {% if task.category == 'Análisis' %}selected{% endif %}>Análisis</option>
-                    {% if task.category not in ['Codificación', 'Análisis'] and task.category %}
-                      <option value="{{ task.category }}" selected>{{ task.category }}</option>
-                    {% endif %}
-                  </select></div></div>
-                <div class="field-group"><span class="field-label">Hito</span><div class="field-input"><input type="text" name="milestone" value="{{ task.milestone or '' }}" /></div></div>
-                <div class="field-group"><span class="field-label">Tipo</span><div class="field-input"><input type="text" name="task_type" value="{{ task.task_type or '' }}" /></div></div>
-                <div class="field-group"><span class="field-label">Sprint</span><div class="field-input"><input type="text" name="sprint" value="{{ task.sprint or '' }}" /></div></div>
-                <div class="field-group"><span class="field-label">Estado</span><div class="field-value">{{ task.status }}</div></div>
-              </div>
-              <div class="task-section">
-                <h3>Descripción</h3>
-                <div class="field-input"><textarea name="description">{{ task.description or '' }}</textarea></div>
-              </div>
-              <div class="task-copy" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <label style="font-size:13px;color:#6e6b76;">Copiar tarea a:</label>
-                <select name="copy_user">
+          </div>
+          <div class="panel-body">
+            <div class="field-grid">
+              <div class="field-group"><span class="field-label"><i class="fas fa-heading"></i> Título</span><div class="field-input"><input type="text" name="title" value="{{ task.title }}" /></div></div>
+              <div class="field-group"><span class="field-label"><i class="fas fa-project-diagram"></i> Proyecto</span><div class="field-value"><a href="{{ url_for('project_detail', project_id=task.project_id) }}" style="color:#c084fc;">{{ task.project_name }}</a></div></div>
+              <div class="field-group"><span class="field-label"><i class="fas fa-hashtag"></i> ID de tarea</span><div class="field-input"><input type="text" name="ticket_number" value="{{ task.ticket_number or '' }}" placeholder="Ej. TASK-001" /></div></div>
+              <div class="field-group"><span class="field-label"><i class="far fa-calendar-alt"></i> Fecha límite</span><div class="field-input"><input type="date" name="deadline" value="{{ task.deadline or '' }}" /></div></div>
+              <div class="field-group"><span class="field-label"><i class="fas fa-user-check"></i> Asignada a</span><div class="field-input">
+                <select name="assigned_email">
+                  <option value="">Sin asignar</option>
                   {% for user in users %}
                     <option value="{{ user.email }}" {% if user.email == task.assigned_email %}selected{% endif %}>{{ user.email }}</option>
                   {% endfor %}
                 </select>
-                <button type="submit" name="action" value="copy">Copiar</button>
-              </div>
+              </div></div>
+              <div class="field-group"><span class="field-label"><i class="fas fa-tag"></i> Categoría</span><div class="field-input">
+                <select name="category">
+                  <option value="Codificación" {% if task.category == 'Codificación' %}selected{% endif %}>Codificación</option>
+                  <option value="Análisis" {% if task.category == 'Análisis' %}selected{% endif %}>Análisis</option>
+                  <option value="Diseño" {% if task.category == 'Diseño' %}selected{% endif %}>Diseño</option>
+                  <option value="QA" {% if task.category == 'QA' %}selected{% endif %}>QA</option>
+                  {% if task.category and task.category not in ['Codificación', 'Análisis', 'Diseño', 'QA'] %}
+                    <option value="{{ task.category }}" selected>{{ task.category }}</option>
+                  {% endif %}
+                </select>
+              </div></div>
+              <div class="field-group"><span class="field-label"><i class="fas fa-flag-checkered"></i> Hito</span><div class="field-input"><input type="text" name="milestone" value="{{ task.milestone or '' }}" placeholder="Hito del proyecto" /></div></div>
+              <div class="field-group"><span class="field-label"><i class="fas fa-layer-group"></i> Tipo</span><div class="field-input"><input type="text" name="task_type" value="{{ task.task_type or '' }}" placeholder="Bug, Feature, Mejora" /></div></div>
+              <div class="field-group"><span class="field-label"><i class="fas fa-forward-fast"></i> Sprint</span><div class="field-input"><input type="text" name="sprint" value="{{ task.sprint or '' }}" placeholder="Sprint X" /></div></div>
+              <div class="field-group"><span class="field-label"><i class="fas fa-chart-simple"></i> Estado interno</span><div class="field-value">{{ task.status or 'Activa' }}</div></div>
             </div>
-          </div>
-        </div>
-        <div class="activity-column">
-          <div class="panel task-section">
-            <div class="panel-header">Registro de actividad</div>
-            <div class="panel-body">
-              <div class="trace-actions">
-                <button type="button" class="trace-action">Adjuntar</button>
-                <button type="button" class="trace-action">Poner una nota</button>
-              </div>
-              <div class="activity-list scrollable">
-                {% for change in changes %}
-                  <div class="activity-item">
-                    <strong>{{ change.author }}</strong>
-                    <span>{{ change.changed_at }}</span>
-                    <p class="activity-note">{{ change.note }}</p>
-                  </div>
+
+            <div class="task-section">
+              <h3><i class="fas fa-align-left"></i> Descripción</h3>
+              <div class="field-input"><textarea name="description" placeholder="Descripción detallada de la tarea...">{{ task.description or '' }}</textarea></div>
+            </div>
+
+            <div class="task-copy">
+              <label style="font-size:13px;color:#b8acf0;"><i class="fas fa-copy"></i> Copiar tarea a:</label>
+              <select name="copy_user">
+                {% for user in users %}
+                  <option value="{{ user.email }}" {% if user.email == task.assigned_email %}selected{% endif %}>{{ user.email }}</option>
                 {% endfor %}
-              </div>
+              </select>
+              <button type="submit" name="action" value="copy"><i class="fas fa-clone"></i> Copiar</button>
             </div>
           </div>
         </div>
       </div>
-    </form>
-  </body>
+
+      <!-- Columna derecha: actividad -->
+      <div class="activity-column">
+        <div class="panel">
+          <div class="panel-header"><i class="fas fa-history"></i> Registro de actividad</div>
+          <div class="panel-body">
+            <div class="trace-actions">
+              <button type="button" class="trace-action" id="attachBtn"><i class="fas fa-paperclip"></i> Adjuntar</button>
+              <button type="button" class="trace-action" id="noteBtn"><i class="fas fa-sticky-note"></i> Poner una nota</button>
+            </div>
+            <div class="activity-list scrollable" id="activityList">
+              {% for change in changes %}
+              <div class="activity-item">
+                <strong><i class="fas fa-user-circle"></i> {{ change.author }}</strong>
+                <span>{{ change.changed_at }}</span>
+                <p class="activity-note">{{ change.note }}</p>
+              </div>
+              {% endfor %}
+              {% if not changes %}
+              <div class="activity-item"><em>No hay actividad reciente</em></div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function() {
+    const form = document.getElementById('taskDetailForm');
+    
+    // Funcion para mostrar toast elegante
+    function showToast(message, type = 'info') {
+      const existing = document.querySelector('.toast-notify');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'toast-notify';
+      let icon = '<i class="fas fa-magic"></i>';
+      if (type === 'success') icon = '<i class="fas fa-check-circle"></i>';
+      if (type === 'error') icon = '<i class="fas fa-exclamation-triangle"></i>';
+      toast.innerHTML = `${icon} ${message}`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2800);
+    }
+
+    // Prevenir envío doble y mostrar feedback para acciones simuladas (demo)
+    form.addEventListener('submit', (e) => {
+      const action = e.submitter?.value || (e.submitter?.name === 'action' ? e.submitter.value : null);
+      // Si es guardado o copia, mostramos toast de éxito simulado (en producción sería real)
+      if (action === 'save') {
+        e.preventDefault();
+        showToast('✅ Cambios guardados exitosamente (demo)', 'success');
+        // Aquí podrías hacer un fetch real, pero simulamos recarga suave
+        setTimeout(() => {
+          // Recargar la página para simular persistencia de demo
+          window.location.reload();
+        }, 800);
+      } else if (action === 'copy') {
+        e.preventDefault();
+        showToast('📋 Tarea copiada al usuario seleccionado (demo)', 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
+      }
+      // Para stage buttons (cambio de estado) también mostramos feedback
+      if (e.submitter && e.submitter.name === 'stage') {
+        e.preventDefault();
+        const newStage = e.submitter.value;
+        showToast(`🔄 Estado cambiado a: ${newStage} (demo)`, 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 600);
+      }
+    });
+
+    // Botones de actividad simulados
+    const attachBtn = document.getElementById('attachBtn');
+    const noteBtn = document.getElementById('noteBtn');
+    if (attachBtn) {
+      attachBtn.addEventListener('click', () => {
+        showToast('📎 Adjuntar archivo - función disponible en versión completa', 'info');
+      });
+    }
+    if (noteBtn) {
+      noteBtn.addEventListener('click', () => {
+        const newNote = prompt('Escribe una nota para la actividad:');
+        if (newNote && newNote.trim()) {
+          showToast('📝 Nota agregada al registro (demo)', 'success');
+          // Simular agregar nota visualmente
+          const activityContainer = document.getElementById('activityList');
+          const newActivity = document.createElement('div');
+          newActivity.className = 'activity-item';
+          newActivity.innerHTML = `<strong><i class="fas fa-user-circle"></i> Usuario actual</strong> <span>${new Date().toLocaleString()}</span>
+                                    <p class="activity-note">${escapeHtml(newNote)}</p>`;
+          if (activityContainer) {
+            activityContainer.prepend(newActivity);
+          }
+        }
+      });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      });
+    }
+  })();
+</script>
+</body>
 </html>

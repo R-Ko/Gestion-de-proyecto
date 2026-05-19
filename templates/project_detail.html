@@ -1,114 +1,598 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ project.name }} · Proyecto</title>
-    <link rel="stylesheet" href="/static/css/odoo_login.css">
-  </head>
-  <body>
-    <div class="page-header">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div class="page-breadcrumb"><a href="{{ url_for('open_app', name='project') }}" style="color:inherit;text-decoration:none;">Proyectos</a> / Tareas</div>
-          <a class="btn-solid" href="{{ url_for('create_task', project_id=project.id) }}">+ Crear</a>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>{{ project.name }} · Kanban AI · FutureFlow</title>
+  <!-- Google Fonts: Inter + Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'Poppins', sans-serif;
+      background: #07060b;
+      color: #f0ecff;
+      overflow-x: auto;
+      min-height: 100vh;
+    }
+
+    /* fondo glows futurista */
+    .bg-glow-kanban {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .bg-glow-kanban::before {
+      content: "";
+      position: absolute;
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(circle, rgba(128, 0, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      top: -20%;
+      left: -15%;
+      filter: blur(100px);
+    }
+    .bg-glow-kanban::after {
+      content: "";
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(255, 80, 200, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+      bottom: -15%;
+      right: -10%;
+      filter: blur(90px);
+    }
+
+    /* contenedor principal */
+    .kanban-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 2rem;
+    }
+
+    /* page header (breadcrumb + acciones) */
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .breadcrumb-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .page-breadcrumb {
+      background: rgba(18, 18, 28, 0.6);
+      backdrop-filter: blur(4px);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      border: 1px solid rgba(128, 90, 213, 0.3);
+    }
+    .page-breadcrumb a {
+      color: #dac5ff;
+      text-decoration: none;
+    }
+    .page-breadcrumb a:hover {
+      text-decoration: underline;
+      color: white;
+    }
+    .btn-solid {
+      background: linear-gradient(105deg, #b63aff, #a540f0);
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: white;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: 0.2s;
+      box-shadow: 0 2px 8px rgba(139, 69, 211, 0.4);
+    }
+    .btn-solid:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(105deg, #c44eff, #b345f0);
+      box-shadow: 0 6px 14px rgba(168, 85, 247, 0.5);
+    }
+    .project-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .btn-delete {
+      background: rgba(180, 60, 100, 0.2);
+      border: 1px solid rgba(244, 114, 182, 0.5);
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-weight: 500;
+      font-size: 0.75rem;
+      color: #ffb3d9;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-delete:hover {
+      background: rgba(220, 70, 120, 0.4);
+      border-color: #ff88bb;
+    }
+    .btn-outline {
+      background: rgba(45, 38, 80, 0.6);
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.75rem;
+      color: #cfc2f7;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    .btn-outline:hover {
+      background: #7a4fcf40;
+      border-color: #c084fc;
+      color: white;
+    }
+
+    /* top toolbar (tabs + search) */
+    .top-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      background: rgba(10, 8, 20, 0.5);
+      backdrop-filter: blur(8px);
+      padding: 0.6rem 1rem;
+      border-radius: 2rem;
+      margin: 0.8rem 0;
+      border: 1px solid rgba(128, 90, 213, 0.3);
+    }
+    .board-tabs {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .board-tab {
+      background: transparent;
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #b9ade2;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    .board-tab.active {
+      background: rgba(139, 92, 246, 0.4);
+      color: white;
+      box-shadow: 0 0 6px #a855f7;
+    }
+    .top-search {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(25, 22, 45, 0.8);
+      border-radius: 2rem;
+      padding: 0.3rem 1rem;
+    }
+    .top-search input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e2d6ff;
+      font-size: 0.8rem;
+    }
+
+    /* segunda barra (filtros ficticios) */
+    .board-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin: 1rem 0 1.2rem;
+    }
+    .board-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Kanban grid con columnas glassmorphism */
+    .board-grid {
+      display: flex;
+      gap: 1.3rem;
+      overflow-x: auto;
+      padding-bottom: 1rem;
+    }
+    .column {
+      background: rgba(18, 18, 28, 0.55);
+      backdrop-filter: blur(8px);
+      border-radius: 1.5rem;
+      width: 300px;
+      min-width: 280px;
+      border: 1px solid rgba(128, 90, 213, 0.3);
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 240px);
+      overflow-y: auto;
+    }
+    .column.drop-target {
+      border: 2px solid #c084fc;
+      background: rgba(128, 70, 200, 0.2);
+      box-shadow: 0 0 12px rgba(168,85,247,0.5);
+    }
+    .column-header {
+      padding: 1rem 1rem 0.7rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(156, 110, 240, 0.3);
+      position: sticky;
+      top: 0;
+      background: rgba(18, 18, 28, 0.8);
+      backdrop-filter: blur(8px);
+      border-radius: 1.5rem 1.5rem 0 0;
+    }
+    .column-total {
+      background: #2a2352;
+      padding: 2px 8px;
+      border-radius: 40px;
+      font-size: 0.7rem;
+    }
+
+    /* Tarjetas Kanban estilo "task-card" mejorado */
+    .kanban-card {
+      background: rgba(30, 28, 44, 0.9);
+      backdrop-filter: blur(4px);
+      margin: 0.8rem;
+      padding: 0.9rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      transition: transform 0.15s, box-shadow 0.2s;
+      cursor: grab;
+      text-decoration: none;
+      display: block;
+      color: #f0ecff;
+    }
+    .kanban-card:active {
+      cursor: grabbing;
+    }
+    .kanban-card:hover {
+      transform: translateY(-2px);
+      border-color: #c084fc;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.4);
+      background: rgba(45, 38, 80, 0.9);
+    }
+    .kanban-card strong {
+      font-size: 0.9rem;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .kanban-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      font-size: 0.65rem;
+    }
+    .kanban-tag {
+      background: rgba(139, 92, 246, 0.5);
+      padding: 2px 8px;
+      border-radius: 40px;
+      color: #e1ccff;
+    }
+    .kanban-date {
+      color: #a598cf;
+    }
+
+    /* scroll personalizado */
+    ::-webkit-scrollbar {
+      height: 5px;
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1b1733;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a855f7;
+      border-radius: 10px;
+    }
+
+    /* responsivo */
+    @media (max-width: 700px) {
+      .kanban-container {
+        padding: 1rem;
+      }
+      .board-grid {
+        gap: 1rem;
+      }
+    }
+    .dragging {
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+<div class="bg-glow-kanban"></div>
+<div class="kanban-container">
+  <!-- Header superior con breadcrumb -->
+  <div class="page-header">
+    <div class="header-row">
+      <div class="breadcrumb-area">
+        <div class="page-breadcrumb">
+          <a href="{{ url_for('open_app', name='project') }}"><i class="fas fa-folder-open"></i> Proyectos</a> / <span style="color:#e2ceff;">{{ project.name }}</span>
         </div>
-        <div class="project-actions">
-          {% if session.user_role == 'admin' %}
-          <form method="post" action="{{ url_for('delete_project', project_id=project.id) }}" onsubmit="return confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.');">
-            <button type="submit" class="btn-delete">Eliminar proyecto</button>
-          </form>
-          {% endif %}
-          <a class="btn-outline" href="/dashboard">Dashboard</a>
-        </div>
+        <a class="btn-solid" href="{{ url_for('create_task', project_id=project.id) }}">
+          <i class="fas fa-plus"></i> Crear tarea
+        </a>
       </div>
-      <div class="top-toolbar">
-          <div class="board-tabs">
-            <a href="{{ url_for('open_app', name='project') }}" class="board-tab">Proyectos</a>
-            <a href="{{ url_for('project_detail', project_id=project.id, view='all') }}" class="board-tab{% if view_filter == 'all' %} active{% endif %}">Todas las tareas</a>
-            <a href="{{ url_for('project_detail', project_id=project.id, view='hitos') }}" class="board-tab{% if view_filter == 'hitos' %} active{% endif %}">Hitos</a>
-            <a href="{{ url_for('project_detail', project_id=project.id, view='sprint') }}" class="board-tab{% if view_filter == 'sprint' %} active{% endif %}">Sprint</a>
-          </div>
-          <div class="top-search"><span>🔍</span><input placeholder="Buscar..." /></div>
-        </div>
+      <div class="project-actions">
+        {% if session.user_role == 'admin' %}
+        <form method="post" action="{{ url_for('delete_project', project_id=project.id) }}" onsubmit="return confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.');" style="display:inline;">
+          <button type="submit" class="btn-delete"><i class="fas fa-trash-alt"></i> Eliminar proyecto</button>
+        </form>
+        {% endif %}
+        <a class="btn-outline" href="/dashboard"><i class="fas fa-chart-line"></i> Dashboard</a>
       </div>
     </div>
-    <div class="board-toolbar">
-      <div class="board-actions">
-        <a class="btn-outline" href="{{ url_for('project_detail', project_id=project.id, view='all') }}">Filtros</a>
-        <a class="btn-outline" href="{{ url_for('project_detail', project_id=project.id, view='hitos') }}">Agrupar por</a>
-        <a class="btn-outline" href="{{ url_for('project_detail', project_id=project.id, view='sprint') }}">Favoritos</a>
+    <!-- Top Toolbar (tabs + search) -->
+    <div class="top-toolbar">
+      <div class="board-tabs">
+        <a href="{{ url_for('open_app', name='project') }}" class="board-tab"><i class="fas fa-list"></i> Proyectos</a>
+        <a href="{{ url_for('project_detail', project_id=project.id, view='all') }}" class="board-tab{% if view_filter == 'all' %} active{% endif %}">Todas las tareas</a>
+        <a href="{{ url_for('project_detail', project_id=project.id, view='hitos') }}" class="board-tab{% if view_filter == 'hitos' %} active{% endif %}">Hitos</a>
+        <a href="{{ url_for('project_detail', project_id=project.id, view='sprint') }}" class="board-tab{% if view_filter == 'sprint' %} active{% endif %}">Sprint</a>
+      </div>
+      <div class="top-search">
+        <i class="fas fa-search" style="color:#b77eff;"></i>
+        <input type="search" id="kanbanSearchInput" placeholder="Buscar tarea..." />
       </div>
     </div>
-    <div class="board-body-wrapper">
-      <div class="board-grid">
-        {% for stage, label in [('pending','*Pendientes/Detenidas'), ('backlog','*Backlog'), ('inprogress','*En progreso'), ('qa','*QA'), ('validation','*En Validación'), ('deployed','*Desplegadas')] %}
-          <div class="column" data-stage="{{ stage }}">
-            <div class="column-header"><span>{{ label }}</span><span class="column-total">{{ task_columns[stage] | length }}</span></div>
-            {% for task in task_columns[stage] %}
-              <a href="{{ url_for('task_detail', task_id=task.id) }}" class="kanban-card" data-task-id="{{ task.id }}" id="task-{{ task.id }}" style="display:block;">
-                <strong>{{ task.title }}</strong>
-                <div class="kanban-meta"><span class="kanban-tag">{{ task.category }}</span><span class="kanban-date">{{ task.deadline }}</span></div>
-              </a>
-            {% endfor %}
+  </div>
+
+  <!-- Barra de acciones (filtros visuales) -->
+  <div class="board-toolbar">
+    <div class="board-actions">
+      <a class="btn-outline" href="#" id="filterAllBtn"><i class="fas fa-filter"></i> Filtros</a>
+      <a class="btn-outline" href="#" id="groupByBtn"><i class="fas fa-layer-group"></i> Agrupar por</a>
+      <a class="btn-outline" href="#" id="favoritesBtn"><i class="fas fa-star"></i> Favoritos</a>
+    </div>
+  </div>
+
+  <!-- Kanban grid: columnas dinámicas -->
+  <div class="board-grid" id="kanbanGrid">
+    {% for stage, label in [('pending','⚠️ Pendientes/Detenidas'), ('backlog','📋 Backlog'), ('inprogress','⚡ En progreso'), ('qa','🧪 QA'), ('validation','✅ En Validación'), ('deployed','🚀 Desplegadas')] %}
+    <div class="column" data-stage="{{ stage }}">
+      <div class="column-header">
+        <span>{{ label }}</span>
+        <span class="column-total">{{ task_columns[stage] | length }}</span>
+      </div>
+      <div class="column-tasks">
+        {% for task in task_columns[stage] %}
+        <a href="{{ url_for('task_detail', task_id=task.id) }}" class="kanban-card" data-task-id="{{ task.id }}" data-task-title="{{ task.title.lower() }}" draggable="true">
+          <strong>{{ task.title }}</strong>
+          <div class="kanban-meta">
+            <span class="kanban-tag"><i class="fas fa-tag"></i> {{ task.category|default('Tarea') }}</span>
+            <span class="kanban-date"><i class="far fa-calendar-alt"></i> {{ task.deadline|default('Sin fecha') }}</span>
           </div>
+        </a>
         {% endfor %}
       </div>
     </div>
-    <script>
-      (function(){
-        const cards = document.querySelectorAll('.kanban-card');
-        const columns = document.querySelectorAll('.column');
+    {% endfor %}
+  </div>
+</div>
 
-        cards.forEach(card => {
-          card.setAttribute('draggable','true');
-          card.addEventListener('dragstart', (e) => {
-            card.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', card.dataset.taskId);
-            setTimeout(()=>{ card.style.opacity = '0.0'; }, 0);
-          });
-          card.addEventListener('dragend', () => {
-            card.classList.remove('dragging');
-            card.style.opacity = '';
-            columns.forEach(c=>c.classList.remove('drop-target'));
-          });
-        });
+<script>
+  (function(){
+    // ---- DRAG & DROP MODERNO (integrado con fetch) ----
+    const cards = document.querySelectorAll('.kanban-card');
+    const columns = document.querySelectorAll('.column');
 
-        columns.forEach(col => {
-          col.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            col.classList.add('drop-target');
-            e.dataTransfer.dropEffect = 'move';
-          });
-          col.addEventListener('dragleave', () => { col.classList.remove('drop-target'); });
-          col.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            const taskId = e.dataTransfer.getData('text/plain');
-            const card = document.querySelector(`[data-task-id="${taskId}"]`);
-            const newStage = col.dataset.stage;
-            if (card && taskId && newStage) {
-              try {
-                const result = await fetch(`/task/${taskId}/move`, {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({stage: newStage})
-                });
-                if (result.ok) {
-                  col.appendChild(card);
-                  window.location.reload();
-                } else {
-                  const error = await result.json();
-                  alert(error.error || 'No se pudo mover la tarea');
-                }
-              } catch (err) {
-                alert('Error al guardar el nuevo estado');
+    // Hacer cada tarjeta draggable y manejar eventos
+    cards.forEach(card => {
+      card.setAttribute('draggable', 'true');
+      
+      card.addEventListener('dragstart', (e) => {
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.dataset.taskId);
+        // Para mejorar la experiencia se puede guardar el id
+        setTimeout(() => { card.style.opacity = '0.4'; }, 0);
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        card.style.opacity = '';
+        columns.forEach(c => c.classList.remove('drop-target'));
+      });
+    });
+
+    columns.forEach(col => {
+      col.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        col.classList.add('drop-target');
+        e.dataTransfer.dropEffect = 'move';
+      });
+      col.addEventListener('dragleave', () => {
+        col.classList.remove('drop-target');
+      });
+      col.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        const taskId = e.dataTransfer.getData('text/plain');
+        const draggedCard = document.querySelector(`.kanban-card[data-task-id="${taskId}"]`);
+        const newStage = col.dataset.stage;
+        if (draggedCard && taskId && newStage) {
+          // Llamada simulada a la API de movimiento (endpoint real)
+          try {
+            const response = await fetch(`/task/${taskId}/move`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ stage: newStage })
+            });
+            if (response.ok) {
+              // Mover la tarjeta a la nueva columna (a la sección .column-tasks)
+              const targetColumnTasks = col.querySelector('.column-tasks');
+              if (targetColumnTasks) {
+                targetColumnTasks.appendChild(draggedCard);
+                // Actualizar contadores
+                updateColumnCounts();
+                showToast(`✅ Tarea movida a ${col.querySelector('.column-header span:first-child').innerText}`, 'success');
+              } else {
+                window.location.reload();
               }
+            } else {
+              const errorData = await response.json();
+              showToast(errorData.error || 'No se pudo mover la tarea', 'error');
             }
-            columns.forEach(c=>c.classList.remove('drop-target'));
-          });
+          } catch (err) {
+            showToast('Error de red: no se pudo actualizar el estado', 'error');
+            console.error(err);
+          }
+        }
+        columns.forEach(c => c.classList.remove('drop-target'));
+      });
+    });
+
+    // Función para actualizar contadores de cada columna después de mover
+    function updateColumnCounts() {
+      columns.forEach(col => {
+        const tasksCount = col.querySelectorAll('.kanban-card').length;
+        const totalSpan = col.querySelector('.column-total');
+        if (totalSpan) totalSpan.innerText = tasksCount;
+      });
+    }
+
+    // ---- BUSQUEDA EN TIEMPO REAL ----
+    const searchInput = document.getElementById('kanbanSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+        const allTasks = document.querySelectorAll('.kanban-card');
+        allTasks.forEach(task => {
+          const title = (task.dataset.taskTitle || task.innerText.toLowerCase());
+          if (term === '' || title.includes(term)) {
+            task.style.display = 'block';
+          } else {
+            task.style.display = 'none';
+          }
         });
-      })();
-    </script>
-  </body>
+        // también actualizar contadores por columna (mostrar solo visibles)
+        columns.forEach(col => {
+          const visibleTasks = Array.from(col.querySelectorAll('.kanban-card')).filter(card => card.style.display !== 'none').length;
+          const counterSpan = col.querySelector('.column-total');
+          if (counterSpan) counterSpan.innerText = visibleTasks;
+        });
+      });
+    }
+
+    // Función para mostrar notificaciones tipo toast
+    function showToast(message, type = 'info') {
+      const existingToast = document.querySelector('.kanban-toast');
+      if (existingToast) existingToast.remove();
+      const toast = document.createElement('div');
+      toast.className = 'kanban-toast';
+      let icon = '<i class="fas fa-magic"></i>';
+      if (type === 'success') icon = '<i class="fas fa-check-circle"></i>';
+      if (type === 'error') icon = '<i class="fas fa-exclamation-triangle"></i>';
+      toast.innerHTML = `${icon} ${message}`;
+      Object.assign(toast.style, {
+        position: 'fixed',
+        bottom: '30px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'linear-gradient(135deg, #2a2352, #181430)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid #b77eff',
+        borderRadius: '60px',
+        padding: '10px 28px',
+        color: '#f0e9ff',
+        fontFamily: "'Inter', sans-serif",
+        fontWeight: 500,
+        fontSize: '0.85rem',
+        zIndex: 10000,
+        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+        whiteSpace: 'nowrap',
+        animation: 'fadeSlideUp 0.2s ease-out forwards'
+      });
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    // Añadir keyframe para toast si no existe
+    if (!document.querySelector('#kanbanToastStyle')) {
+      const style = document.createElement('style');
+      style.id = 'kanbanToastStyle';
+      style.innerText = `
+        @keyframes fadeSlideUp {
+          0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(0px); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Simular acciones de botones superiores (demo)
+    const filterBtn = document.getElementById('filterAllBtn');
+    const groupBtn = document.getElementById('groupByBtn');
+    const favBtn = document.getElementById('favoritesBtn');
+    if (filterBtn) filterBtn.addEventListener('click', (e) => { e.preventDefault(); showToast('🔍 Filtros avanzados próximamente', 'info'); });
+    if (groupBtn) groupBtn.addEventListener('click', (e) => { e.preventDefault(); showToast('📁 Agrupación por etapas activa', 'info'); });
+    if (favBtn) favBtn.addEventListener('click', (e) => { e.preventDefault(); showToast('⭐ Marca tus tareas favoritas pronto', 'info'); });
+
+    // Ajuste extra: asegurar que cada columna tenga .column-tasks (si no, crear)
+    columns.forEach(col => {
+      if (!col.querySelector('.column-tasks')) {
+        const tasksWrapper = document.createElement('div');
+        tasksWrapper.className = 'column-tasks';
+        const cardsInside = Array.from(col.children).filter(child => child.classList && child.classList.contains('kanban-card'));
+        cardsInside.forEach(card => tasksWrapper.appendChild(card));
+        col.appendChild(tasksWrapper);
+      }
+    });
+  })();
+</script>
+
+<!-- estilo adicional para mantener contenedor de tareas -->
+<style>
+  .column-tasks {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-height: 50px;
+  }
+  .kanban-card.dragging {
+    opacity: 0.2;
+  }
+  .btn-outline, .btn-solid, .btn-delete {
+    cursor: pointer;
+  }
+  .board-tab {
+    transition: background 0.2s, color 0.2s;
+  }
+  .top-search input::placeholder {
+    color: #7c6faa;
+  }
+</style>
+</body>
 </html>

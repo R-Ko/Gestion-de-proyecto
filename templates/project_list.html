@@ -1,57 +1,693 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Proyectos</title>
-    <link rel="stylesheet" href="/static/css/odoo_login.css">
-  </head>
-  <body>
-    <div class="page-header">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-        <div>
-          <div class="page-title">Proyectos</div>
-          <div class="page-breadcrumb">Visión general de proyectos</div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Proyectos · FutureFlow AI</title>
+  <!-- Google Fonts: Inter + Poppins (modern sans) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome 6 (icon set) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'Poppins', sans-serif;
+      background: #07060b;
+      overflow-x: hidden;
+      color: #f0ecff;
+      padding: 0;
+    }
+
+    /* Fondo con glows futuristas (misma línea que dashboard) */
+    .bg-glow-projects {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .bg-glow-projects::before {
+      content: "";
+      position: absolute;
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(circle, rgba(128, 0, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      top: -20%;
+      left: -15%;
+      filter: blur(100px);
+    }
+    .bg-glow-projects::after {
+      content: "";
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(255, 80, 200, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+      bottom: -10%;
+      right: -10%;
+      filter: blur(90px);
+    }
+
+    /* Contenedor principal estilo premium */
+    .projects-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 2rem 3rem;
+    }
+
+    /* Encabezado + filtros */
+    .page-header {
+      margin-bottom: 2rem;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .title-section .page-title {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #FFFFFF, #d9bcff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.3px;
+    }
+    .title-section .page-breadcrumb {
+      color: #a79ac9;
+      font-size: 0.85rem;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-create {
+      background: linear-gradient(105deg, #b63aff, #a540f0, #dd6eff);
+      border: none;
+      padding: 0.75rem 1.6rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: white;
+      transition: 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 14px rgba(139, 69, 211, 0.3);
+    }
+    .btn-create:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 22px rgba(168, 85, 247, 0.5);
+    }
+
+    /* Filtros estilo pills */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      background: rgba(18, 18, 28, 0.5);
+      backdrop-filter: blur(8px);
+      padding: 0.6rem 1.2rem;
+      border-radius: 3rem;
+      border: 1px solid rgba(128, 90, 213, 0.3);
+      margin-top: 0.5rem;
+    }
+    .action-pill {
+      background: rgba(30, 25, 55, 0.7);
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #cfc5f2;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+    .action-pill.active {
+      background: linear-gradient(95deg, rgba(139, 92, 246, 0.7), rgba(192, 132, 252, 0.3));
+      color: white;
+      border-color: #c084fc;
+      box-shadow: 0 0 8px rgba(192, 132, 252, 0.4);
+    }
+    .action-pill:hover:not(.active) {
+      background: rgba(100, 70, 180, 0.5);
+      color: #f0eaff;
+    }
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: rgba(25, 22, 45, 0.8);
+      border-radius: 2rem;
+      padding: 0.4rem 1rem;
+      border: 1px solid rgba(156, 110, 240, 0.5);
+      margin-left: auto;
+    }
+    .search-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e2d6ff;
+      font-size: 0.85rem;
+      padding: 6px 0;
+      width: 160px;
+    }
+    .search-box input::placeholder {
+      color: #7c6faa;
+    }
+
+    /* Grid de proyectos estilo "task-card" moderno (cambas) */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.8rem;
+      margin-top: 2rem;
+    }
+
+    /* Project card = evolución de .task-card con glassmorphism oscuro */
+    .project-card {
+      background: rgba(18, 18, 28, 0.75);
+      backdrop-filter: blur(12px);
+      border-radius: 28px;
+      padding: 1.5rem 1.5rem 1.4rem;
+      box-shadow: 0 20px 32px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(128, 90, 213, 0.2);
+      transition: transform 0.25s ease, box-shadow 0.25s;
+      border: 1px solid rgba(168, 85, 247, 0.2);
+    }
+    .project-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 28px 36px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(192, 132, 252, 0.5);
+      border-color: rgba(168, 85, 247, 0.5);
+    }
+
+    /* header de tarjeta */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+    .project-title-link {
+      text-decoration: none;
+    }
+    .project-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      background: linear-gradient(120deg, #ffffff, #d7b9ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.2px;
+      transition: 0.2s;
+    }
+    .project-title-link:hover .project-title {
+      text-shadow: 0 0 6px #c084fc;
+    }
+    .project-tag {
+      background: rgba(139, 92, 246, 0.3);
+      padding: 0.2rem 0.8rem;
+      border-radius: 30px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #d7bbff;
+      border: 0.5px solid rgba(192, 132, 252, 0.5);
+    }
+    .project-meta {
+      font-size: 0.7rem;
+      color: #aca4d4;
+      margin: 8px 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* estadísticas tipo booster (tareas / tickets) */
+    .project-stats {
+      display: flex;
+      gap: 1.2rem;
+      margin: 1rem 0 1.2rem;
+      padding: 0.6rem 0;
+      border-top: 1px solid rgba(156, 110, 240, 0.25);
+      border-bottom: 1px solid rgba(156, 110, 240, 0.25);
+    }
+    .stat-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px 12px;
+      border-radius: 40px;
+    }
+    .stat-badge i {
+      font-size: 0.9rem;
+      color: #c084fc;
+    }
+    .stat-number {
+      font-weight: 800;
+      color: #f0eaff;
+    }
+
+    /* footer tipo task-footer con avatar y botón sutíl */
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    .avatar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(145deg, #422b6e, #241a44);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #cdb5ff;
+      border: 1px solid rgba(192, 132, 252, 0.6);
+    }
+    .btn-subtle {
+      background: rgba(45, 38, 80, 0.7);
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      border-radius: 2rem;
+      padding: 0.4rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #ddd0ff;
+      cursor: pointer;
+      transition: 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-subtle:hover {
+      background: #7a4fcf40;
+      border-color: #c084fc;
+      color: white;
+    }
+    .btn-delete-card {
+      background: none;
+      border: none;
+      color: #b984a5;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0 6px;
+      transition: 0.2s;
+    }
+    .btn-delete-card:hover {
+      color: #ff99cc;
+      text-shadow: 0 0 3px #f0a3ff;
+    }
+
+    /* resposive */
+    @media (max-width: 750px) {
+      .projects-container {
+        padding: 1.2rem;
+      }
+      .filter-bar {
+        flex-wrap: wrap;
+      }
+      .search-box {
+        width: 100%;
+        margin-left: 0;
+      }
+      .search-box input {
+        width: 100%;
+      }
+    }
+    /* scroll elegante */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #140f26;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a855f7;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="bg-glow-projects"></div>
+<div class="projects-container">
+  <!-- Cabecera + botón nuevo proyecto -->
+  <div class="page-header">
+    <div class="header-row">
+      <div class="title-section">
+        <div class="page-title"><i class="fas fa-rocket" style="margin-right: 10px;"></i> Proyectos</div>
+        <div class="page-breadcrumb">
+          <i class="fas fa-chart-line"></i> Visión general de proyectos · AI workspace
         </div>
-        {% if session.user_role == 'admin' %}
-        <a href="{{ url_for('create_project') }}" class="btn-create">Nuevo proyecto</a>
-        {% endif %}
       </div>
-      <div class="page-actions">
-        <a class="action-pill" href="/dashboard">Dashboard</a>
-        <a class="action-pill{% if filter_by == 'all' %} active{% endif %}" href="/app/project?filter=all">Todos</a>
-        <a class="action-pill{% if filter_by == 'assigned' %} active{% endif %}" href="/app/project?filter=assigned">Asignados</a>
-        <a class="action-pill{% if filter_by == 'hitos' %} active{% endif %}" href="/app/project?filter=hitos">Hitos</a>
-        <a class="action-pill{% if filter_by == 'sprint' %} active{% endif %}" href="/app/project?filter=sprint">Sprint</a>
-        <div class="search-box">
-          <span style="margin-right:8px;">🔍</span>
-          <input type="search" placeholder="Buscar..." />
-        </div>
+      <!-- rol admin condicional: en este HTML estático simulamos con variable pero usamos data-role -->
+      <a href="#" class="btn-create" id="createProjectBtn"><i class="fas fa-plus-circle"></i> Nuevo proyecto</a>
+    </div>
+    <div class="filter-bar">
+      <a class="action-pill active" href="#" data-filter="all">Todos</a>
+      <a class="action-pill" href="#" data-filter="assigned">Asignados</a>
+      <a class="action-pill" href="#" data-filter="hitos">Hitos</a>
+      <a class="action-pill" href="#" data-filter="sprint">Sprint</a>
+      <a class="action-pill" href="#" data-filter="dashboard">Dashboard</a>
+      <div class="search-box">
+        <i class="fas fa-search" style="color:#b77eff;"></i>
+        <input type="search" id="searchInput" placeholder="Buscar proyecto..." />
       </div>
     </div>
-    <div class="projects-grid">
-      {% for p in projects %}
-      <div class="proj-card">
-        <div class="proj-header">
-          <div class="proj-info">
-            <a href="/project/{{ p.id }}" class="proj-title">{{ p.name }}</a>
-            <div class="proj-meta">Propietario: {{ p.owner }} · Asignados: {{ p.assigned }}</div>
-          </div>
-          <div class="proj-actions">
-            <span class="project-tag">Proyecto</span>
-            {% if session.user_role == 'admin' %}
-            <form method="post" action="{{ url_for('delete_project', project_id=p.id) }}" onsubmit="return confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.');">
-              <button type="submit" class="btn-delete">Eliminar</button>
-            </form>
-            {% endif %}
+  </div>
+
+  <!-- Grid de proyectos (cards estilo "cambas" / task-card evolucionado) -->
+  <div class="projects-grid" id="projectsGrid">
+    <!-- Los datos se renderizan dinámicamente con JS para mantener coherencia y permitir filtros/busqueda -->
+  </div>
+</div>
+
+<script>
+  // Datos de ejemplo (proyectos) similares a los anteriores pero con estructura enriquecedora
+  const projectsData = [
+    {
+      id: 1,
+      name: "Neural CRM Integration",
+      owner: "Laura Mendes",
+      assigned: 8,
+      tasks: 24,
+      tickets: 12,
+      status: "activo",
+      category: "hitos",
+      avatarInitials: "LM",
+      sprint: false,
+    },
+    {
+      id: 2,
+      name: "AI Analytics Suite v2",
+      owner: "Carlos Ríos",
+      assigned: 5,
+      tasks: 41,
+      tickets: 7,
+      status: "activo",
+      category: "sprint",
+      avatarInitials: "CR",
+      sprint: true,
+    },
+    {
+      id: 3,
+      name: "Mobile App v3.0",
+      owner: "Sofia Kim",
+      assigned: 12,
+      tasks: 18,
+      tickets: 9,
+      status: "activo",
+      category: "asignados",
+      avatarInitials: "SK",
+      sprint: false,
+    },
+    {
+      id: 4,
+      name: "Legacy Data Migration",
+      owner: "James Wong",
+      assigned: 3,
+      tasks: 9,
+      tickets: 4,
+      status: "pausado",
+      category: "hitos",
+      avatarInitials: "JW",
+      sprint: false,
+    },
+    {
+      id: 5,
+      name: "Dashboard Redesign AI",
+      owner: "Emily Chen",
+      assigned: 7,
+      tasks: 32,
+      tickets: 15,
+      status: "activo",
+      category: "sprint",
+      avatarInitials: "EC",
+      sprint: true,
+    },
+    {
+      id: 6,
+      name: "Blockchain integration",
+      owner: "Alex Morgan",
+      assigned: 6,
+      tasks: 14,
+      tickets: 3,
+      status: "planning",
+      category: "asignados",
+      avatarInitials: "AM",
+      sprint: false,
+    }
+  ];
+
+  let currentFilter = "all";
+  let searchTerm = "";
+
+  // Render proyectos con cards tipo "task-card" / cambas
+  function renderProjects() {
+    const grid = document.getElementById('projectsGrid');
+    if (!grid) return;
+
+    let filtered = [...projectsData];
+    // filtro por categoría (simulación de filtros: all, assigned, hitos, sprint)
+    if (currentFilter === "assigned") {
+      filtered = filtered.filter(p => p.assigned >= 5);
+    } else if (currentFilter === "hitos") {
+      filtered = filtered.filter(p => p.category === "hitos");
+    } else if (currentFilter === "sprint") {
+      filtered = filtered.filter(p => p.sprint === true || p.category === "sprint");
+    } else if (currentFilter === "dashboard") {
+      // dashboard filter -> muestra todos pero con mensaje
+      filtered = filtered;
+    }
+
+    // búsqueda por nombre
+    if (searchTerm.trim() !== "") {
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding: 4rem; background:rgba(0,0,0,0.3); border-radius: 40px;">
+                          <i class="fas fa-folder-open" style="font-size: 2.5rem; color:#9f89cf;"></i>
+                          <p style="margin-top:12px;">No se encontraron proyectos 🔍</p>
+                        </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(project => `
+      <div class="project-card" data-project-id="${project.id}">
+        <div class="card-header">
+          <a href="/project/${project.id}" class="project-title-link" style="text-decoration:none;">
+            <div class="project-title">${escapeHtml(project.name)}</div>
+          </a>
+          <div class="project-tag">
+            <i class="fas fa-cube"></i> Proyecto
           </div>
         </div>
-        <div class="proj-booster">
-          <div class="proj-stat"><span class="icon">📌</span><strong>{{ p.tasks }}</strong> Tareas</div>
-          <div class="proj-stat"><span class="icon">📁</span><strong>{{ p.tickets }}</strong> Tickets</div>
+        <div class="project-meta">
+          <div class="meta-item"><i class="fas fa-user-astronaut" style="color:#bc9eff;"></i> Propietario: ${escapeHtml(project.owner)}</div>
+          <div class="meta-item"><i class="fas fa-users"></i> Asignados: ${project.assigned}</div>
+        </div>
+        <div class="project-stats">
+          <div class="stat-badge"><i class="fas fa-tasks"></i> <span class="stat-number">${project.tasks}</span> Tareas</div>
+          <div class="stat-badge"><i class="fas fa-ticket-alt"></i> <span class="stat-number">${project.tickets}</span> Tickets</div>
+          <div class="stat-badge"><i class="fas fa-chart-simple"></i> ${project.status === 'activo' ? 'Activo' : (project.status === 'pausado' ? 'En espera' : 'Planificación')}</div>
+        </div>
+        <div class="card-footer">
+          <div class="avatar-group">
+            <div class="avatar">${project.avatarInitials}</div>
+            <span style="font-size:0.7rem; color:#b7abd4;">+${project.assigned} miembros</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <a href="/project/${project.id}" class="btn-subtle"><i class="fas fa-eye"></i> Detalles</a>
+            <button class="btn-delete-card delete-project" data-id="${project.id}" title="Eliminar proyecto"><i class="fas fa-trash-alt"></i></button>
+          </div>
         </div>
       </div>
-      {% endfor %}
-    </div>
-  </body>
+    `).join('');
+
+    // agregar eventos para eliminar (simulación admin)
+    document.querySelectorAll('.delete-project').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const projectId = parseInt(btn.getAttribute('data-id'));
+        if (confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.')) {
+          // simular eliminación (solo front)
+          const index = projectsData.findIndex(p => p.id === projectId);
+          if (index !== -1) projectsData.splice(index, 1);
+          renderProjects(); // re-render
+          showToast(`✅ Proyecto eliminado correctamente`, 'success');
+        }
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+      return c;
+    });
+  }
+
+  // notificaciones tipo glass
+  function showToast(message, type = 'info') {
+    const existingToast = document.querySelector('.project-toast');
+    if (existingToast) existingToast.remove();
+    const toast = document.createElement('div');
+    toast.className = 'project-toast';
+    toast.innerHTML = `<span>${type === 'success' ? '✓' : '✨'}</span> ${message}`;
+    Object.assign(toast.style, {
+      position: 'fixed',
+      bottom: '28px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      background: 'linear-gradient(135deg, #2a2352, #181430)',
+      backdropFilter: 'blur(20px)',
+      border: '1px solid #b77eff',
+      borderRadius: '60px',
+      padding: '10px 28px',
+      color: '#f0e9ff',
+      fontFamily: "'Inter', sans-serif",
+      fontWeight: 500,
+      fontSize: '0.85rem',
+      zIndex: 10000,
+      boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+      whiteSpace: 'nowrap',
+      animation: 'fadeSlideUp 0.2s ease-out forwards'
+    });
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
+  // agregar estilo de animación si no existe
+  if (!document.querySelector('#toastAnimStyle')) {
+    const styleAnim = document.createElement('style');
+    styleAnim.id = 'toastAnimStyle';
+    styleAnim.innerText = `
+      @keyframes fadeSlideUp {
+        0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        100% { opacity: 1; transform: translateX(-50%) translateY(0px); }
+      }
+    `;
+    document.head.appendChild(styleAnim);
+  }
+
+  // listeners para filtros y búsqueda
+  function initEventListeners() {
+    const filterLinks = document.querySelectorAll('.action-pill');
+    filterLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const filterValue = link.getAttribute('data-filter');
+        if (filterValue) {
+          currentFilter = filterValue;
+          // update active class
+          filterLinks.forEach(ln => ln.classList.remove('active'));
+          link.classList.add('active');
+          renderProjects();
+          showToast(`Filtro aplicado: ${link.innerText.trim()}`, 'info');
+        } else if (link.innerText.includes('Dashboard')) {
+          // caso dashboard acción demo
+          showToast('📊 Dashboard general - vista rápida', 'info');
+        }
+      });
+    });
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchTerm = e.target.value;
+        renderProjects();
+      });
+    }
+
+    const createBtn = document.getElementById('createProjectBtn');
+    if (createBtn) {
+      createBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showToast('🚀 Nueva ventana de creación de proyecto (demo interactivo)', 'info');
+        // se podría redirigir o simular
+      });
+    }
+
+    // opcional: dashboard link adicional
+    const dashboardPill = Array.from(filterLinks).find(link => link.innerText.includes('Dashboard'));
+    if (dashboardPill) {
+      dashboardPill.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = "/dashboard";
+      });
+    }
+  }
+
+  // init render y eventos
+  renderProjects();
+  initEventListeners();
+
+  // añadir estilo a los botones sutiles global
+  console.log("Proyectos con diseño 'task-card' premium y filtros");
+</script>
+
+<!-- Ajustes extra para que los botones se vean coherentes -->
+<style>
+  .btn-create i, .btn-subtle i {
+    pointer-events: none;
+  }
+  .project-card a {
+    text-decoration: none;
+  }
+  .project-card .project-title-link {
+    flex: 1;
+  }
+  .project-toast {
+    pointer-events: none;
+  }
+  .btn-delete-card {
+    background: rgba(0,0,0,0.4);
+    border-radius: 40px;
+    width: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-delete-card:hover {
+    background: #aa3e6c30;
+  }
+  .filter-bar .action-pill[data-filter="dashboard"] {
+    background: #642e9e40;
+  }
+</style>
+</body>
 </html>
